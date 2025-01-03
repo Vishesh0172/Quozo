@@ -48,7 +48,7 @@ import com.example.quozo.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CreateQuizScreen(modifier: Modifier = Modifier, state: CreateQuizState, onEvent:(CreateQuizEvent) -> Unit) {
+fun CreateQuizScreen(modifier: Modifier = Modifier, state: CreateQuizState, onEvent:(CreateQuizEvent) -> Unit, navigateToQuiz:(Long) -> Unit) {
 
     var dropDownState by remember {  mutableStateOf(false) }
     val color by  animateColorAsState(targetValue =
@@ -73,9 +73,6 @@ fun CreateQuizScreen(modifier: Modifier = Modifier, state: CreateQuizState, onEv
             }
 
         }
-
-
-
             Column(modifier = Modifier
                 .weight(3f)
                 .fillMaxSize()
@@ -107,10 +104,10 @@ fun CreateQuizScreen(modifier: Modifier = Modifier, state: CreateQuizState, onEv
                         .fillMaxWidth()
                         .padding(top = 12.dp),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword, imeAction = ImeAction.Done),
-                    value = state.questionLimit.toString(),
+                    value = if(state.questionLimit == 0) "" else state.questionLimit.toString(),
                     onValueChange = { it ->
                         onEvent(
-                            CreateQuizEvent.SetQuestionLimit(if (it == "") "0" else it)
+                            CreateQuizEvent.SetQuestionLimit(it)
                         )
                     }
                 )
@@ -191,11 +188,14 @@ fun CreateQuizScreen(modifier: Modifier = Modifier, state: CreateQuizState, onEv
                 )
             }
 
-
             ElevatedButton(
                 enabled = state.buttonEnabled,
                 colors = ButtonDefaults.elevatedButtonColors(containerColor = color),
-                onClick = {},
+                onClick = {
+                    onEvent(CreateQuizEvent.CreateQuiz)
+                    if (state.quizId!=null)
+                        navigateToQuiz(state.quizId)
+                          },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp)
@@ -212,6 +212,6 @@ fun CreateQuizScreen(modifier: Modifier = Modifier, state: CreateQuizState, onEv
 fun CreateQuizPreview(modifier: Modifier = Modifier) {
     val state = CreateQuizState()
     Surface {
-        CreateQuizScreen(state = state) { }
+        CreateQuizScreen(state = state, navigateToQuiz = {}, onEvent = {})
     }
 }
