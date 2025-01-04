@@ -41,6 +41,7 @@ class CreateQuizViewModel @Inject constructor(
         when(event) {
             is CreateQuizEvent.CreateQuiz -> {
                 viewModelScope.launch{
+
                     val questionIds = apiRepository.getQuestionIds(
                         category = state.value.category.lowercase(),
                         difficulty = state.value.difficulty.lowercase(),

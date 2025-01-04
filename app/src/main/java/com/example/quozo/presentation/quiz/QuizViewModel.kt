@@ -1,5 +1,6 @@
 package com.example.quozo.presentation.quiz
 
+import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -8,6 +9,7 @@ import com.example.quozo.data.api.ApiRepository
 import com.example.quozo.data.room.QuizDao
 import com.example.quozo.presentation.navigation.QuizRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -27,10 +29,14 @@ class QuizViewModel @Inject constructor(
     val state = _state.asStateFlow()
 
     init {
-        viewModelScope.launch{
+        val task = viewModelScope.launch{
             val quiz = quizDao.getQuiz(quizId)
-            _state.update { it.copy(questionIds = quiz.questionIds, currentQuestionIndex = quiz.questionsAnswered) }
+            _state.update { it.copy(questionIds = quiz.questionIds, currentQuestionIndex = quiz.questionsAnswered, time = quiz.timeLimit, timeLimit = quiz.timeLimit) }
             getQuestionAndUpdateState(quiz.questionIds[quiz.questionsAnswered])
+        }
+        viewModelScope.launch{
+            task.join()
+            startTimer()
         }
     }
 
@@ -39,29 +45,65 @@ class QuizViewModel @Inject constructor(
         when(event){
             QuizEvent.SubmitAnswer -> {
                 if(state.value.selectedAnswer == state.value.correctAnswer){
-                    _state.update { it.copy(answerState = AnswerState.CorrectAnswer) }
+                    _state.update { it.copy(answerState = AnswerState.CorrectAnswer, score = state.value.score + 20) }
                 }else
                     _state.update { it.copy(answerState = AnswerState.WrongAnswer) }
 
-                _state.update { it.copy(submitted = true) }
+                _state.update { it.copy(
+                    submitted = true,
+                ) }
+
                 viewModelScope.launch {
                     quizDao.updateQuestionsAnswered(quizId, state.value.currentQuestionIndex + 1)
+                    quizDao.updateScore(quizId, state.value.score)
                 }
             }
 
             QuizEvent.NextQuestion -> {
+                val progress: Float = (state.value.currentQuestionIndex.toFloat()/state.value.questionIds.size.toFloat())
+                _state.update { it.copy(
+                    submitted = false,
+                    selectedAnswer = "",
+                    progress = progress,
+                    currentQuestionIndex =
+                    if(state.value.currentQuestionIndex == state.value.questionIds.size - 1)
+                        state.value.currentQuestionIndex
+                    else
+                        state.value.currentQuestionIndex + 1,
+                ) }
+
                 viewModelScope.launch{
-                    _state.update { it.copy(currentQuestionIndex = state.value.currentQuestionIndex + 1) }
-                    val questionId = state.value.questionIds[state.value.currentQuestionIndex]
-                    getQuestionAndUpdateState(questionId)
+                    if(state.value.currentQuestionIndex <= state.value.questionIds.size - 1) {
+                        val questionId = state.value.questionIds[state.value.currentQuestionIndex]
+                        getQuestionAndUpdateState(questionId)
+                        startTimer()
+                    }
                 }
             }
 
             is QuizEvent.SelectAnswer -> _state.update { it.copy(selectedAnswer = event.value) }
+
+            QuizEvent.QuizComplete -> _state.update { it.copy(quizComplete = true) }
         }
     }
 
 
+
+    private suspend fun startTimer(){
+        while (state.value.time>0){
+            if (state.value.submitted == true)
+                break
+
+            delay(1000L)
+            _state.update { it.copy(time = state.value.time - 1) }
+            _state.update { it.copy(timerProgress = state.value.time.toFloat()/state.value.timeLimit.toFloat()) }
+            Log.d("Timer", (state.value.time).toString())
+
+            if (state.value.time == 0)
+                onEvent(QuizEvent.SubmitAnswer)
+
+        }
+    }
 
     private suspend fun getQuestionAndUpdateState(id: String){
 
@@ -72,10 +114,12 @@ class QuizViewModel @Inject constructor(
 
         _state.update {
             it.copy(
+                time = state.value.timeLimit,
+                timerProgress = 1f,
                 allOptions = newList,
                 question = question.question.text,
                 incorrectAnswers = question.incorrectAnswers,
-                correctAnswer = question.correctAnswer
+                correctAnswer = question.correctAnswer,
             )
         }
     }
@@ -83,6 +127,7 @@ class QuizViewModel @Inject constructor(
 }
 
 data class QuizState(
+    val quizComplete: Boolean = false,
     val selectedAnswer: String = "",
     val currentQuestionIndex: Int = 0,
     val allOptions: List<String> = emptyList(),
@@ -95,7 +140,9 @@ data class QuizState(
     val incorrectAnswers: List<String> = emptyList(),
     val correctAnswer: String = "",
     val question: String = "",
-    val submitted: Boolean = false
+    val submitted: Boolean = false,
+    val progress: Float = 0f,
+    val timerProgress: Float = 1f
 )
 
 sealed interface AnswerState{
@@ -107,5 +154,6 @@ sealed interface AnswerState{
 sealed interface QuizEvent{
     data object SubmitAnswer: QuizEvent
     data object NextQuestion: QuizEvent
+    data object QuizComplete: QuizEvent
     data class SelectAnswer(val value: String): QuizEvent
 }

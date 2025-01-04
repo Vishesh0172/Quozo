@@ -15,4 +15,12 @@ interface QuizDao {
 
     @Query("UPDATE quiz SET questionsAnswered = :questionsAnswered WHERE quizId = :quizId")
     suspend fun updateQuestionsAnswered(quizId: Long, questionsAnswered: Int)
+
+    @Query("UPDATE quiz SET score = :score WHERE quizId = :quizId")
+    suspend fun updateScore(quizId: Long, score: Int)
+
+    @Query("SELECT score from quiz WHERE quizId == :quizId")
+    suspend fun getScore(quizId: Long) : Int
+
+
 }

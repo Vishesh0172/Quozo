@@ -19,6 +19,8 @@ import com.example.quozo.presentation.createQuiz.CreateQuizViewModel
 import com.example.quozo.presentation.home.HomeScreen
 import com.example.quozo.presentation.quiz.QuizScreen
 import com.example.quozo.presentation.quiz.QuizViewModel
+import com.example.quozo.presentation.score.ScoreScreen
+import com.example.quozo.presentation.score.ScoreViewModel
 import kotlinx.serialization.Serializable
 
 @Composable
@@ -51,10 +53,22 @@ fun AppNavigation(modifier: Modifier = Modifier, paddingValues: PaddingValues) {
             }
 
             composable<QuizRoute>{
-                val args = it.toRoute<QuizRoute>()
                 val viewModel: QuizViewModel = hiltViewModel()
                 val state by viewModel.state.collectAsStateWithLifecycle()
-                QuizScreen(state = state, onEvent = viewModel::onEvent)
+                QuizScreen(
+                    modifier = Modifier.padding(paddingValues),
+                    state = state,
+                    onEvent = viewModel::onEvent,
+                    navigateToScore = { score -> navController.navigate(ScoreRoute(score)){
+                        popUpTo<QuizRoute>(){inclusive = true}
+                    } }
+                )
+            }
+
+            composable<ScoreRoute>{
+                val viewModel: ScoreViewModel = hiltViewModel()
+                val state by viewModel.state.collectAsStateWithLifecycle()
+                ScoreScreen(state = state)
             }
 
         }
@@ -71,4 +85,9 @@ data class CreateQuizRoute(
 @Serializable
 data class QuizRoute(
     val quizId: Long
+)
+
+@Serializable
+data class ScoreRoute(
+    val score: Int
 )
