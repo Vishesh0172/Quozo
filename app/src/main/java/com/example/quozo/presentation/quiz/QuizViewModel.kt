@@ -1,14 +1,18 @@
 package com.example.quozo.presentation.quiz
 
+import android.content.Context
+import android.content.Intent
 import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
+import com.example.quozo.AppService
 import com.example.quozo.data.api.ApiRepository
 import com.example.quozo.data.room.QuizDao
 import com.example.quozo.presentation.navigation.QuizRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -21,7 +25,8 @@ import kotlin.random.Random
 class QuizViewModel @Inject constructor(
     private val quizDao: QuizDao,
     private val apiRepository: ApiRepository,
-    savedStateHandle: SavedStateHandle
+    savedStateHandle: SavedStateHandle,
+    @ApplicationContext private val context: Context
 ): ViewModel(){
 
     private val quizId = savedStateHandle.toRoute<QuizRoute>().quizId
@@ -31,19 +36,36 @@ class QuizViewModel @Inject constructor(
     init {
         val task = viewModelScope.launch{
             val quiz = quizDao.getQuiz(quizId)
-            _state.update { it.copy(questionIds = quiz.questionIds, currentQuestionIndex = quiz.questionsAnswered, time = quiz.timeLimit, timeLimit = quiz.timeLimit) }
+            _state.update { it.copy(
+                questionIds = quiz.questionIds,
+                currentQuestionIndex = quiz.questionsAnswered,
+                time = quiz.timeLimit,
+                timeLimit = quiz.timeLimit
+            ) }
             getQuestionAndUpdateState(quiz.questionIds[quiz.questionsAnswered])
+        }
+        Intent(context, AppService::class.java).also {
+            it.action = AppService.Actions.START.toString()
+            context.startService(it)
         }
         viewModelScope.launch{
             task.join()
             startTimer()
+
         }
     }
+
 
 
     fun onEvent(event: QuizEvent){
         when(event){
             QuizEvent.SubmitAnswer -> {
+
+                Intent(context, AppService::class.java).also {
+                    it.action = AppService.Actions.STOP.toString()
+                    context.startService(it)
+                }
+
                 if(state.value.selectedAnswer == state.value.correctAnswer){
                     _state.update { it.copy(answerState = AnswerState.CorrectAnswer, score = state.value.score + 20) }
                 }else
@@ -57,6 +79,9 @@ class QuizViewModel @Inject constructor(
                     quizDao.updateQuestionsAnswered(quizId, state.value.currentQuestionIndex + 1)
                     quizDao.updateScore(quizId, state.value.score)
                 }
+
+
+
             }
 
             QuizEvent.NextQuestion -> {
@@ -79,6 +104,7 @@ class QuizViewModel @Inject constructor(
                         startTimer()
                     }
                 }
+
             }
 
             is QuizEvent.SelectAnswer -> _state.update { it.copy(selectedAnswer = event.value) }
@@ -90,17 +116,28 @@ class QuizViewModel @Inject constructor(
 
 
     private suspend fun startTimer(){
-        while (state.value.time>0){
-            if (state.value.submitted == true)
+        while (state.value.time>=0){
+            if (state.value.submitted == true) {
+                Intent(context, AppService::class.java).also {
+                    it.action = AppService.Actions.STOP.toString()
+                    context.startService(it)
+                }
                 break
-
+            }
             delay(1000L)
             _state.update { it.copy(time = state.value.time - 1) }
-            _state.update { it.copy(timerProgress = state.value.time.toFloat()/state.value.timeLimit.toFloat()) }
+            _state.update { it.copy(timerProgress = state.value.time.toFloat() / state.value.timeLimit.toFloat()) }
+            Intent(context, AppService::class.java).also {
+                it.action = AppService.Actions.UPDATE.toString()
+                it.putExtra("updatedValue", state.value.time.toString())
+                context.startService(it)
+            }
             Log.d("Timer", (state.value.time).toString())
-
-            if (state.value.time == 0)
+            if (state.value.time == 0) {
                 onEvent(QuizEvent.SubmitAnswer)
+            }
+
+
 
         }
     }
