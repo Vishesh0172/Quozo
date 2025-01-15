@@ -1,12 +1,13 @@
 package com.example.quozo.presentation.createQuiz
 
-import android.util.Log
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.navigation.toRoute
 import com.example.quozo.data.api.ApiRepository
 import com.example.quozo.data.room.Quiz
 import com.example.quozo.data.room.QuizDao
-import com.example.quozo.data.room.Status
+import com.example.quozo.presentation.navigation.CreateQuizRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -19,22 +20,20 @@ import javax.inject.Inject
 @HiltViewModel
 class CreateQuizViewModel @Inject constructor(
     private val apiRepository: ApiRepository,
-    private val dao: QuizDao
+    private val dao: QuizDao,
+    savedStateHandle: SavedStateHandle
 ): ViewModel(){
 
-    init {
-        Log.d("DAO", "Dao Injected: $dao")
-    }
-
-    private val _state = MutableStateFlow<CreateQuizState>(CreateQuizState())
+    private val category = savedStateHandle.toRoute<CreateQuizRoute>().category
+    private val _state = MutableStateFlow<CreateQuizState>(CreateQuizState(category = category))
     private val _quizId = MutableStateFlow<Long?>(null)
     val state = combine(_state,_quizId){state, quizId ->
         state.copy(quizId = quizId)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), CreateQuizState())
 
-    fun init(category: String){
-        _state.update { it.copy(category = category) }
-    }
+//    fun init(category: String){
+//        _state.update { it.copy(category = category) }
+//    }
 
 
     fun onEvent(event: CreateQuizEvent){
@@ -51,9 +50,6 @@ class CreateQuizViewModel @Inject constructor(
                     val quiz = Quiz(
                         category = state.value.category,
                         questionIds = questionIds,
-                        questionsAnswered = 0,
-                        status = Status.INCOMPLETE.value,
-                        score = 0,
                         timeLimit = state.value.timeLimit
                     )
                     val quizId = dao.upsertQuiz(quiz)

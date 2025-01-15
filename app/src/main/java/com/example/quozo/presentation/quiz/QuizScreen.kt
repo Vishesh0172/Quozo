@@ -44,6 +44,7 @@ fun QuizScreen(modifier: Modifier = Modifier, state: QuizState, onEvent:(QuizEve
             navigateToScore(state.score)
     }
 
+
     val animatedProgress = animateFloatAsState(
         targetValue = state.progress,
         animationSpec = ProgressIndicatorDefaults.ProgressAnimationSpec

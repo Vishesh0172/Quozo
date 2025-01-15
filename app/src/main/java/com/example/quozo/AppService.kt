@@ -8,9 +8,7 @@ import androidx.core.app.NotificationCompat
 
 class AppService: Service() {
 
-    val notification = NotificationCompat.Builder(this, "timer_channel")
-        .setSmallIcon(R.drawable.film_icon)
-        .setContentText("Seconds left to Answer")
+
 
 
     override fun onBind(p0: Intent?): IBinder? {
@@ -27,14 +25,24 @@ class AppService: Service() {
     }
 
     private fun start(timeValue: String?){
+        notification(timeValue)
+    }
+
+    private fun notification(timerValue: String?){
+        val notification = NotificationCompat.Builder(this, "timer_channel")
+            .setSmallIcon(R.drawable.film_icon)
+            .setContentTitle(timerValue)
+            .setContentText("Seconds left to Answer")
+
         startForeground(1,notification.build())
     }
 
+
     private fun update(timeValue: String?){
         val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
-        notification.setContentTitle(timeValue)
-        notificationManager.notify(0, notification.build())
-        startForeground(1,notification.build())
+
+        //notificationManager.notify(0, notification.build())
+
     }
 
 

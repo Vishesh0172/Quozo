@@ -1,6 +1,5 @@
 package com.example.quozo.presentation.home
 
-import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -33,18 +32,16 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.example.quozo.R
-import kotlin.collections.mapOf
+import com.example.quozo.models.QuizCategory
 
 @Composable
-fun HomeScreen(modifier: Modifier = Modifier, paddingValues: PaddingValues, createQuiz: () -> Unit) {
+fun HomeScreen(state: HomeState, modifier: Modifier = Modifier, paddingValues: PaddingValues, createQuiz: (String) -> Unit, onProfileClick: () -> Unit) {
 
 
-    val map = mapOf("Sports" to R.drawable.sports_icon2, "Film" to R.drawable.film_icon, "Maths" to R.drawable.math_icon)//("Sports", "Film", "Maths")
-    val keyList = map.keys.toList()
+    val categoryList = state.categoryList
     Scaffold(
         modifier = modifier.fillMaxSize(),
-        topBar = { TopBar() }
+        topBar = { TopBar(onProfileClick = onProfileClick) }
     ) { padding ->
         LazyVerticalGrid(
             columns = GridCells.Fixed(2),
@@ -54,19 +51,14 @@ fun HomeScreen(modifier: Modifier = Modifier, paddingValues: PaddingValues, crea
                 .padding(padding)
                 .padding(top = 10.dp)
         ) {
-            items(keyList){
+            items(categoryList){
                 QuizTypeCard(
                     modifier = Modifier.padding(
-                        top =
-                        if (isOdd(keyList.indexOf(it))){
-                            20.dp
-                        }else {
-                            0.dp
-                        }
+                        top = if (isOdd(categoryList.indexOf(it))){ 20.dp }else { 0.dp }
                     ),
-                    title = it,
+                    category = it,
                     createQuiz = createQuiz,
-                    icon = map.getValue(it)
+
                 )
             }
         }
@@ -76,7 +68,7 @@ fun HomeScreen(modifier: Modifier = Modifier, paddingValues: PaddingValues, crea
 
 
 @Composable
-fun QuizTypeCard(modifier: Modifier = Modifier, title: String, createQuiz:() -> Unit, @DrawableRes icon: Int) {
+fun QuizTypeCard(modifier: Modifier = Modifier, category: QuizCategory, createQuiz:(String) -> Unit) {
     Box(modifier = modifier
         .aspectRatio(0.8f)
         .padding(horizontal = 8.dp)){
@@ -85,8 +77,8 @@ fun QuizTypeCard(modifier: Modifier = Modifier, title: String, createQuiz:() -> 
             .fillMaxHeight(0.8f)
             .align(Alignment.BottomCenter)){
             Column(Modifier.fillMaxSize().padding(10.dp), verticalArrangement = Arrangement.Bottom) {
-                Text(text = title, style = MaterialTheme.typography.titleMedium)
-                OutlinedButton(onClick = {createQuiz()}, modifier = Modifier.fillMaxWidth()) {
+                Text(text = category.displayName, style = MaterialTheme.typography.titleMedium, maxLines = 2)
+                OutlinedButton(onClick = {createQuiz(category.value)}, modifier = Modifier.fillMaxWidth()) {
                     Text(text = "Play Now", style = MaterialTheme.typography.bodyMedium
                     )
                    }
@@ -95,7 +87,7 @@ fun QuizTypeCard(modifier: Modifier = Modifier, title: String, createQuiz:() -> 
 
         Image(
             modifier = Modifier.align(Alignment.TopStart).fillMaxSize(0.6f),
-            painter = painterResource(icon),
+            painter = painterResource(category.imgRes),
             contentDescription = null,
             alignment = Alignment.TopStart,
             contentScale = ContentScale.Fit
@@ -106,13 +98,13 @@ fun QuizTypeCard(modifier: Modifier = Modifier, title: String, createQuiz:() -> 
 
 @Preview
 @Composable
-fun HomePreview(modifier: Modifier = Modifier) {
-    HomeScreen(paddingValues = PaddingValues(10.dp)){}
+fun HomePreview(modifier: Modifier = Modifier, ) {
+    //HomeScreen(paddingValues = PaddingValues(10.dp)){}
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TopBar(modifier: Modifier = Modifier) {
+fun TopBar(modifier: Modifier = Modifier, onProfileClick:() -> Unit) {
     TopAppBar(
         title = {
             Column(){
@@ -121,7 +113,7 @@ fun TopBar(modifier: Modifier = Modifier) {
             }
         },
         actions = {
-            IconButton(onClick ={} ) {
+            IconButton(onClick = {onProfileClick()}) {
                 Icon(
                 imageVector = Icons.Filled.AccountCircle,
                 contentDescription = null

@@ -30,6 +30,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -49,6 +50,12 @@ import com.example.quozo.R
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreateQuizScreen(modifier: Modifier = Modifier, state: CreateQuizState, onEvent:(CreateQuizEvent) -> Unit, navigateToQuiz:(Long) -> Unit) {
+
+    LaunchedEffect(state.quizId) {
+        if (state.quizId!=null)
+            navigateToQuiz(state.quizId)
+    }
+
 
     var dropDownState by remember {  mutableStateOf(false) }
     val color by  animateColorAsState(targetValue =
@@ -191,11 +198,7 @@ fun CreateQuizScreen(modifier: Modifier = Modifier, state: CreateQuizState, onEv
             ElevatedButton(
                 enabled = state.buttonEnabled,
                 colors = ButtonDefaults.elevatedButtonColors(containerColor = color),
-                onClick = {
-                    onEvent(CreateQuizEvent.CreateQuiz)
-                    if (state.quizId!=null)
-                        navigateToQuiz(state.quizId)
-                          },
+                onClick = { onEvent(CreateQuizEvent.CreateQuiz) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp)

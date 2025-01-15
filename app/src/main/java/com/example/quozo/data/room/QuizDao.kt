@@ -22,5 +22,16 @@ interface QuizDao {
     @Query("SELECT score from quiz WHERE quizId == :quizId")
     suspend fun getScore(quizId: Long) : Int
 
+    @Query("UPDATE quiz SET status = 1 WHERE quizId = :quizId")
+    suspend fun updateStatus(quizId: Long)
+
+    @Query("SELECT * from quiz WHERE status == 1")
+    suspend fun getCompletedQuiz() : List<Quiz>
+
+    @Query("SELECT * from quiz WHERE status == 0")
+    suspend fun getIncompleteQuiz() : List<Quiz>
+
+    @Query("SELECT * from quiz")
+    suspend fun getAllQuiz() : List<Quiz>
 
 }
