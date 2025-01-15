@@ -93,7 +93,8 @@ fun AppNavigation(modifier: Modifier = Modifier, paddingValues: PaddingValues) {
                         navController.navigate(AnimationRoute(quizId = quizId)){ }
                     },
                     state = state,
-                    modifier = Modifier.padding(paddingValues)
+                    modifier = Modifier.padding(paddingValues),
+                    onEvent = viewModel::onEvent
                 )
             }
 

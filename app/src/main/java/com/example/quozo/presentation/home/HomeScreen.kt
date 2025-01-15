@@ -10,15 +10,14 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -28,6 +27,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
@@ -41,7 +41,7 @@ fun HomeScreen(state: HomeState, modifier: Modifier = Modifier, paddingValues: P
     val categoryList = state.categoryList
     Scaffold(
         modifier = modifier.fillMaxSize(),
-        topBar = { TopBar(onProfileClick = onProfileClick) }
+        topBar = { TopBar(avatar = state.avatar, name = state.userName, onProfileClick = onProfileClick) }
     ) { padding ->
         LazyVerticalGrid(
             columns = GridCells.Fixed(2),
@@ -104,19 +104,21 @@ fun HomePreview(modifier: Modifier = Modifier, ) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TopBar(modifier: Modifier = Modifier, onProfileClick:() -> Unit) {
+fun TopBar(modifier: Modifier = Modifier, onProfileClick:() -> Unit, avatar: Int, name: String) {
     TopAppBar(
         title = {
             Column(){
                 Text(text = "Welcome", style = MaterialTheme.typography.titleSmall)
-                Text(text = "Vishesh", style = MaterialTheme.typography.titleLarge)
+                Text(text = name, style = MaterialTheme.typography.titleLarge)
             }
         },
         actions = {
             IconButton(onClick = {onProfileClick()}) {
-                Icon(
-                imageVector = Icons.Filled.AccountCircle,
-                contentDescription = null
+                Image(
+                    painter = painterResource(avatar),
+                    modifier = Modifier.size(50.dp).clip(CircleShape),
+                    contentScale = ContentScale.Crop,
+                    contentDescription = null
             ) }
         }
     )

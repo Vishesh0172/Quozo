@@ -1,34 +1,73 @@
 package com.example.quozo.presentation.profile
 
+import androidx.annotation.DrawableRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.quozo.R
 import com.example.quozo.data.local.CategoryDatabase
+import com.example.quozo.data.local.DataStoreRepository
 import com.example.quozo.data.room.Quiz
 import com.example.quozo.data.room.QuizDao
 import com.example.quozo.models.QuizCategory
+import com.example.quozo.models.User
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
 class ProfileViewModel @Inject constructor(
     quizDao: QuizDao,
-    categoryDatabase: CategoryDatabase
+    categoryDatabase: CategoryDatabase,
+    private val dataStoreRepository: DataStoreRepository
 ): ViewModel() {
 
-    val _state = MutableStateFlow(ProfileState())
-    val state = _state
-        .onStart { _state.update { it.copy(incompleteList = quizDao.getIncompleteQuiz(), completeList = quizDao.getCompletedQuiz(), categoryList = categoryDatabase.categoryList) }}
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ProfileState())
+    private val user = dataStoreRepository.userFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(), User())
+    private val _state = MutableStateFlow(ProfileState())
 
+    val state = combine(_state, user) { state, user ->
+        state.copy(userName = user.name, avatar = user.avatarId)
+    }.onStart {
+        _state.update { it.copy(
+            incompleteList = quizDao.getIncompleteQuiz(),
+            completeList = quizDao.getCompletedQuiz(),
+            categoryList = categoryDatabase.categoryList
+        ) }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ProfileState())
+
+    fun onEvent(event: ProfileEvent){
+        when(event){
+            is ProfileEvent.updateAvatar -> {
+                viewModelScope.launch{
+                    dataStoreRepository.updateAvatar(event.id)
+                }
+
+            }
+            is ProfileEvent.updateUserName -> {
+                viewModelScope.launch{
+                    dataStoreRepository.updateUserName(event.name)
+                }
+
+            }
+        }
+    }
 }
 
 data class ProfileState(
+    val userName: String = "",
+    @DrawableRes val avatar: Int = R.drawable.ic_launcher_background,
     val incompleteList: List<Quiz> = emptyList(),
     val completeList: List<Quiz> = emptyList(),
-    val categoryList: List<QuizCategory> = emptyList()
+    val categoryList: List<QuizCategory> = emptyList(),
+    val avatarList: List<Int> = listOf(R.drawable.avatar_male, R.drawable.avatar_female)
 )
+
+sealed interface ProfileEvent{
+    data class updateAvatar(val id: Int): ProfileEvent
+    data class updateUserName(val name: String): ProfileEvent
+}

@@ -4,11 +4,13 @@ import androidx.annotation.DrawableRes
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -22,13 +24,19 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material3.AssistChip
+import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.ProgressIndicatorDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
@@ -43,12 +51,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import com.example.quozo.R
 import com.example.quozo.data.room.Quiz
 import com.example.quozo.data.room.Status
@@ -56,33 +66,63 @@ import com.example.quozo.models.QuizCategory
 import kotlinx.coroutines.launch
 
 @Composable
-fun ProfileScreen(modifier: Modifier = Modifier, state: ProfileState, continueQuiz: (Long) -> Unit) {
+fun ProfileScreen(modifier: Modifier = Modifier, state: ProfileState, continueQuiz: (Long) -> Unit, onEvent:(ProfileEvent) -> Unit) {
 
     var selectedTabIndex by remember { mutableStateOf(0) }
+    var showAvatarDialog by remember { mutableStateOf(false) }
+    var showNameDialog by remember { mutableStateOf(false) }
     val titles = listOf<String>("Incomplete", "Complete")
     val pagerState = rememberPagerState() { 2 }
     val coroutineScope = rememberCoroutineScope()
+
+    if (showAvatarDialog)
+        AvatarDialog(
+            modifier = modifier,
+            avatarList = state.avatarList,
+            updateAvatar = onEvent,
+            onDismiss = {showAvatarDialog = false}
+        )
+
+    if(showNameDialog)
+        UserNameDialog(
+            modifier = modifier,
+            name = state.userName,
+            onDismiss = {showNameDialog = false},
+            onEvent = onEvent
+        )
 
     Column(
         modifier = modifier
             .fillMaxSize()
     ) {
-        Image(
-            painter = painterResource(R.drawable.ic_launcher_background),
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier
-                .padding(start = 10.dp)
-                .size(100.dp)
-                .clip(CircleShape)
-        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Image(
+                painter = painterResource(state.avatar),
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .padding(start = 10.dp)
+                    .size(100.dp)
+                    .clip(CircleShape)
+                    .clickable(onClick = { showAvatarDialog = true })
+            )
 
-        Spacer(Modifier.height(30.dp))
+            Row (verticalAlignment = Alignment.CenterVertically){
+                Text(
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    text = state.userName,
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(start = 12.dp).weight(1f)
+                )
+                IconButton(onClick = {showNameDialog = true}) { Icon(imageVector = Icons.Rounded.Edit, contentDescription = null) }
+            }
+        }
 
-        Text(text = "Quizzes", modifier = Modifier.padding(start = 10.dp), style = MaterialTheme.typography.titleSmall)
-        Spacer(Modifier.height(8.dp))
 
-        TabRow(selectedTabIndex = selectedTabIndex) {
+        Spacer(Modifier.height(24.dp))
+
+        TabRow(selectedTabIndex = selectedTabIndex, containerColor = MaterialTheme.colorScheme.background) {
            titles.forEachIndexed { index, title ->
                Tab(
                    text = { Text(text = title) },
@@ -149,13 +189,16 @@ fun QuizItem(modifier: Modifier = Modifier, quiz: Quiz, @DrawableRes imgId: Int,
 
     ){
         Column (
-            modifier = Modifier.wrapContentHeight()
-                .clickable(onClick = {expanded = !expanded})
+            modifier = Modifier
+                .wrapContentHeight()
+                .clickable(onClick = { expanded = !expanded })
                 .padding(10.dp)
                 .animateContentSize()
         ){
 
-        Row (modifier = Modifier.fillMaxWidth().wrapContentHeight()) {
+        Row (modifier = Modifier
+            .fillMaxWidth()
+            .wrapContentHeight()) {
             Column(
                 verticalArrangement = Arrangement.Center,
                 modifier = Modifier
@@ -176,7 +219,9 @@ fun QuizItem(modifier: Modifier = Modifier, quiz: Quiz, @DrawableRes imgId: Int,
                         color = MaterialTheme.colorScheme.secondary,
                         progress = { animatedProgress },
                         strokeCap = StrokeCap.Round,
-                        modifier = Modifier.padding(top = 6.dp).height(8.5.dp)
+                        modifier = Modifier
+                            .padding(top = 6.dp)
+                            .height(8.5.dp)
                     )
                 else
                     AssistChip(
@@ -223,6 +268,92 @@ fun QuizItem(modifier: Modifier = Modifier, quiz: Quiz, @DrawableRes imgId: Int,
 
 }
 
+@Composable
+fun AvatarDialog(modifier: Modifier = Modifier, avatarList: List<Int>, updateAvatar:(ProfileEvent) -> Unit, onDismiss:() -> Unit) {
+
+    var selectedImage by remember { mutableStateOf(avatarList[0]) }
+
+    Dialog(onDismissRequest = {onDismiss()}) {
+
+        Card(modifier = modifier
+            .fillMaxSize(0.75f)
+            .aspectRatio(1f)) {
+            Column(modifier = Modifier
+                .fillMaxSize()
+                .padding(10.dp),
+                verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally){
+                Image( painter = painterResource(selectedImage), contentDescription = null, modifier = Modifier.weight(4f))
+                Row (modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+                    horizontalArrangement = Arrangement.SpaceEvenly){
+                    avatarList.forEach { avatarId ->
+                        val imageSelected = avatarId == selectedImage
+                        Image(
+                            painter = painterResource(avatarId),
+                            contentDescription = null,
+                            modifier = Modifier
+                                .border(
+                                    shape = CircleShape,
+                                    width = if (imageSelected) 2.dp else 0.dp,
+                                    color = if (imageSelected) MaterialTheme.colorScheme.outline else Color.Transparent
+                                )
+                                .clickable(onClick = { selectedImage = avatarId })
+                        )
+                    }
+                }
+                Button(onClick = {
+                    updateAvatar(ProfileEvent.updateAvatar(selectedImage))
+                    onDismiss()
+                }, 
+                    modifier = Modifier.padding(10.dp)
+                ) { Text(text = "Update Avatar") }
+
+            }
+        }
+    }
+
+}
+
+@Composable
+fun UserNameDialog(modifier: Modifier = Modifier, name: String, onDismiss: () -> Unit, onEvent: (ProfileEvent) -> Unit) {
+
+    var nameState by remember { mutableStateOf(name) }
+
+    Dialog(onDismissRequest = { onDismiss() }) {
+
+        Card(
+            modifier = modifier
+                .fillMaxSize(0.75f)
+                .aspectRatio(1f)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(10.dp),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+
+                OutlinedTextField(
+                    shape = RoundedCornerShape(20.dp),
+                    value = nameState,
+                    onValueChange = { nameState = it },
+                    singleLine = true,
+                    modifier = Modifier.padding(10.dp))
+                Button(
+                    onClick = {
+                        onEvent(ProfileEvent.updateUserName(nameState))
+                        onDismiss()
+                    },
+                    modifier = Modifier.padding(10.dp)
+                ) { Text(text = "Update") }
+
+            }
+        }
+
+    }
+}
 @Preview
 @Composable
 fun QuizItemPreview(modifier: Modifier = Modifier) {
