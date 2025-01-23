@@ -25,9 +25,11 @@ class DataStoreRepository(
     val userFlow: Flow<User> = context.dataStore.data.map { preferences ->
         User(
             avatarId = preferences[AVATAR_ID] ?: R.drawable.avatar_male,
-            name = preferences[USER_NAME] ?: "DataStoreUser"
+            name = preferences[USER_NAME] ?: ""
         )
     }
+
+
 
     suspend fun updateAvatar(avatarId: Int){
         context.dataStore.edit { preferences ->

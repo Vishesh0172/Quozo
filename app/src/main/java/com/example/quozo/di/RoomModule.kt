@@ -21,7 +21,8 @@ object RoomModule {
         return Room.databaseBuilder(
             context,
             LocalQuizDatabase::class.java, "local-quiz.db"
-        ).build()
+        )
+            .fallbackToDestructiveMigration().build()
     }
 
     @Provides

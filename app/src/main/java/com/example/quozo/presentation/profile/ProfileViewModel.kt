@@ -1,6 +1,9 @@
 package com.example.quozo.presentation.profile
 
 import androidx.annotation.DrawableRes
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.snapshots.SnapshotStateList
+import androidx.compose.runtime.toMutableStateList
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.quozo.R
@@ -22,7 +25,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class ProfileViewModel @Inject constructor(
-    quizDao: QuizDao,
+    private val quizDao: QuizDao,
     categoryDatabase: CategoryDatabase,
     private val dataStoreRepository: DataStoreRepository
 ): ViewModel() {
@@ -34,8 +37,8 @@ class ProfileViewModel @Inject constructor(
         state.copy(userName = user.name, avatar = user.avatarId)
     }.onStart {
         _state.update { it.copy(
-            incompleteList = quizDao.getIncompleteQuiz(),
-            completeList = quizDao.getCompletedQuiz(),
+            incompleteList = quizDao.getIncompleteQuiz().toMutableStateList(),
+            completeList = quizDao.getCompletedQuiz().toMutableStateList(),
             categoryList = categoryDatabase.categoryList
         ) }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ProfileState())
@@ -54,6 +57,31 @@ class ProfileViewModel @Inject constructor(
                 }
 
             }
+
+            is ProfileEvent.deleteQuiz -> {
+                viewModelScope.launch{
+                    quizDao.deleteQuiz(state.value.quizToDelete!!)
+                    _state.update { it.copy(
+                        incompleteList = state.value.incompleteList.also {
+                            if (it.contains(state.value.quizToDelete))
+                                it.remove(state.value.quizToDelete)
+                        },
+
+                        completeList = state.value.completeList.also {
+                            if (it.contains(state.value.quizToDelete))
+                                it.remove(state.value.quizToDelete)
+                        }
+                    ) }
+                }
+            }
+
+            is ProfileEvent.ShowDialog -> {
+                _state.update { it.copy(quizToDelete = event.quiz) }
+            }
+
+            ProfileEvent.DismissDialog -> {
+                _state.update { it.copy(quizToDelete = null) }
+            }
         }
     }
 }
@@ -61,13 +89,17 @@ class ProfileViewModel @Inject constructor(
 data class ProfileState(
     val userName: String = "",
     @DrawableRes val avatar: Int = R.drawable.ic_launcher_background,
-    val incompleteList: List<Quiz> = emptyList(),
-    val completeList: List<Quiz> = emptyList(),
+    val incompleteList: SnapshotStateList<Quiz> = mutableStateListOf(),
+    val completeList: SnapshotStateList<Quiz> = mutableStateListOf(),
     val categoryList: List<QuizCategory> = emptyList(),
-    val avatarList: List<Int> = listOf(R.drawable.avatar_male, R.drawable.avatar_female)
+    val avatarList: List<Int> = listOf(R.drawable.avatar_male, R.drawable.avatar_female),
+    val quizToDelete: Quiz? = null
 )
 
 sealed interface ProfileEvent{
     data class updateAvatar(val id: Int): ProfileEvent
+    data object deleteQuiz: ProfileEvent
     data class updateUserName(val name: String): ProfileEvent
+    data class ShowDialog(val quiz: Quiz): ProfileEvent
+    data object DismissDialog: ProfileEvent
 }

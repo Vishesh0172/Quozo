@@ -8,6 +8,8 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
@@ -25,7 +27,9 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -42,6 +46,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -55,6 +60,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -71,6 +77,7 @@ fun ProfileScreen(modifier: Modifier = Modifier, state: ProfileState, continueQu
     var selectedTabIndex by remember { mutableStateOf(0) }
     var showAvatarDialog by remember { mutableStateOf(false) }
     var showNameDialog by remember { mutableStateOf(false) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
     val titles = listOf<String>("Incomplete", "Complete")
     val pagerState = rememberPagerState() { 2 }
     val coroutineScope = rememberCoroutineScope()
@@ -89,6 +96,27 @@ fun ProfileScreen(modifier: Modifier = Modifier, state: ProfileState, continueQu
             name = state.userName,
             onDismiss = {showNameDialog = false},
             onEvent = onEvent
+        )
+
+    if(showDeleteDialog)
+        AlertDialog(
+            modifier = modifier,
+            onDismissRequest = {showDeleteDialog = false},
+            confirmButton = {
+                TextButton(onClick = {
+                    showDeleteDialog = false
+                    onEvent(ProfileEvent.deleteQuiz)
+                }) { Text("Confirm")}
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    showDeleteDialog = false
+
+                }) { Text("Dismiss")}
+                            },
+            title = {Text(text = "Delete Quiz")},
+            icon = {Icon(imageVector = Icons.Default.Delete, contentDescription = null)},
+            text = {Text(text = "Are you sure you want to delete the quiz? All your progress will be lost")},
         )
 
     Column(
@@ -113,7 +141,9 @@ fun ProfileScreen(modifier: Modifier = Modifier, state: ProfileState, continueQu
                     overflow = TextOverflow.Ellipsis,
                     text = state.userName,
                     style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(start = 12.dp).weight(1f)
+                    modifier = Modifier
+                        .padding(start = 12.dp)
+                        .weight(1f)
                 )
                 IconButton(onClick = {showNameDialog = true}) { Icon(imageVector = Icons.Rounded.Edit, contentDescription = null) }
             }
@@ -138,11 +168,29 @@ fun ProfileScreen(modifier: Modifier = Modifier, state: ProfileState, continueQu
 
             when(page){
                 0 -> {
-                    QuizList(modifier = Modifier.fillMaxSize(),items = state.incompleteList, categoryList = state.categoryList, continueQuiz = continueQuiz)
+                    QuizList(
+                        modifier = Modifier.fillMaxSize(),
+                        items = state.incompleteList,
+                        categoryList = state.categoryList,
+                        continueQuiz = continueQuiz,
+                        showDeleteDialog = {
+                            onEvent(ProfileEvent.ShowDialog(it))
+                            showDeleteDialog = true
+                        }
+                    )
                     selectedTabIndex = 0
                 }
                 1 -> {
-                    QuizList(modifier = Modifier.fillMaxSize(),items = state.completeList, categoryList = state.categoryList, continueQuiz)
+                    QuizList(
+                        modifier = Modifier.fillMaxSize(),
+                        items = state.completeList,
+                        categoryList = state.categoryList,
+                        continueQuiz = continueQuiz,
+                        showDeleteDialog = {
+                            onEvent(ProfileEvent.ShowDialog(it))
+                            showDeleteDialog = true
+                        }
+                    )
                     selectedTabIndex = 1
                 }
             }
@@ -157,20 +205,30 @@ fun ProfileScreen(modifier: Modifier = Modifier, state: ProfileState, continueQu
 
 
 @Composable
-fun QuizList(modifier: Modifier = Modifier, items: List<Quiz>, categoryList: List<QuizCategory>, continueQuiz: (Long) -> Unit) {
+fun QuizList(modifier: Modifier = Modifier, items: List<Quiz>, categoryList: List<QuizCategory>, continueQuiz: (Long) -> Unit, showDeleteDialog: (Quiz) -> Unit) {
 
     LazyColumn (modifier = modifier, state = rememberLazyListState()){
-        items(items){ quiz ->
+        items(items, key = {it.quizId}){ quiz ->
             val category = categoryList.find { it.value.equals(quiz.category, ignoreCase = true)  }
             val imgId = category?.imgRes ?: R.drawable.ic_launcher_foreground
             val displayName = category?.displayName!!
-            QuizItem(quiz = quiz, imgId = imgId, modifier = Modifier.padding(10.dp), displayName = displayName, continueQuiz = continueQuiz)
+            QuizItem(
+                quiz = quiz,
+                imgId = imgId,
+                modifier = Modifier
+                    .padding(10.dp)
+                    .animateItem(),
+                displayName = displayName,
+                continueQuiz = continueQuiz,
+                showDeleteDialog = showDeleteDialog
+            )
         }
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun QuizItem(modifier: Modifier = Modifier, quiz: Quiz, @DrawableRes imgId: Int, displayName: String, continueQuiz:(Long) -> Unit) {
+fun QuizItem(modifier: Modifier = Modifier, quiz: Quiz, @DrawableRes imgId: Int, displayName: String, continueQuiz:(Long) -> Unit, showDeleteDialog:(Quiz) -> Unit) {
 
     val progressFloat = quiz.questionsAnswered.toFloat()/quiz.questionIds.size.toFloat()
     var expanded by remember { mutableStateOf(false) }
@@ -204,7 +262,7 @@ fun QuizItem(modifier: Modifier = Modifier, quiz: Quiz, @DrawableRes imgId: Int,
                 modifier = Modifier
                     .wrapContentHeight()
                     .padding(20.dp)
-                    .weight(2f)
+                    .weight(2.5f)
             ) {
                 Text(
                     text = displayName,
@@ -212,7 +270,7 @@ fun QuizItem(modifier: Modifier = Modifier, quiz: Quiz, @DrawableRes imgId: Int,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                Text(text = "Played on 12/12/12", style = MaterialTheme.typography.bodySmall)
+                Text(text = quiz.date, style = MaterialTheme.typography.bodySmall)
                 if (quiz.status == Status.INCOMPLETE.value)
                     LinearProgressIndicator(
                         trackColor = MaterialTheme.colorScheme.secondaryContainer,
@@ -224,10 +282,18 @@ fun QuizItem(modifier: Modifier = Modifier, quiz: Quiz, @DrawableRes imgId: Int,
                             .height(8.5.dp)
                     )
                 else
-                    AssistChip(
-                        onClick = {},
-                        label = { Text(text = "Complete") }
-                    )
+                    FlowRow(horizontalArrangement = Arrangement.SpaceAround, modifier = Modifier.fillMaxWidth()) {
+                        AssistChip(
+                            onClick = {},
+                            label = { Text(text = quiz.difficulty) }
+                        )
+
+                        AssistChip(
+                            onClick = {},
+                            label = { Text(text = "Score:${quiz.score} 100000") }
+                        )
+                    }
+
 
 
             }
@@ -244,21 +310,22 @@ fun QuizItem(modifier: Modifier = Modifier, quiz: Quiz, @DrawableRes imgId: Int,
             if (expanded) {
                 Row (modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly){
 
-                        OutlinedButton(
-                            modifier = Modifier.wrapContentHeight(),
-                            onClick = {},
-                            colors = ButtonDefaults.outlinedButtonColors(containerColor = MaterialTheme.colorScheme.errorContainer),
-                        ) { Text(text = "Delete") }
+                    OutlinedButton(
+                        modifier = Modifier.wrapContentHeight(),
+                        onClick = {showDeleteDialog(quiz)},
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            containerColor = MaterialTheme.colorScheme.errorContainer,
+                            contentColor = MaterialTheme.colorScheme.onErrorContainer
+                        ),) { Text(text = stringResource(R.string.delete)) }
 
+                    if (!quizComplete)
                         OutlinedButton(
                             modifier = Modifier.wrapContentHeight(),
                             onClick = {
-                                if (!quizComplete){
-                                    continueQuiz(quiz.quizId.toLong())
-                                }
+                                continueQuiz(quiz.quizId.toLong())
                             },
                             colors = ButtonDefaults.outlinedButtonColors(),
-                        ) { Text(text = if (quizComplete) "View Details" else "Continue" ) }
+                        ) { Text(text = "Continue" ) }
                 }
 
             }
@@ -354,6 +421,8 @@ fun UserNameDialog(modifier: Modifier = Modifier, name: String, onDismiss: () ->
 
     }
 }
+
+
 @Preview
 @Composable
 fun QuizItemPreview(modifier: Modifier = Modifier) {
@@ -362,7 +431,8 @@ fun QuizItemPreview(modifier: Modifier = Modifier) {
         QuizItem(
             quiz = Quiz(category = "Sports", questionsAnswered = 1, questionIds = questionList),
             imgId = R.drawable.sports_icon2,
-            displayName = ""
+            displayName = "",
+            continueQuiz = {}
         ){}
     }
 }

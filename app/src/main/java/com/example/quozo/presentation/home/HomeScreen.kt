@@ -1,5 +1,10 @@
 package com.example.quozo.presentation.home
 
+import android.view.MotionEvent
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -25,20 +30,34 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.input.pointer.pointerInteropFilter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.example.quozo.R
 import com.example.quozo.models.QuizCategory
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
-fun HomeScreen(state: HomeState, modifier: Modifier = Modifier, paddingValues: PaddingValues, createQuiz: (String) -> Unit, onProfileClick: () -> Unit) {
-
+fun SharedTransitionScope.HomeScreen(
+    state: HomeState,
+    modifier: Modifier = Modifier,
+    paddingValues: PaddingValues,
+    createQuiz: (String, Int) -> Unit, onProfileClick: () -> Unit,
+    animatedVisibilityScope: AnimatedVisibilityScope
+) {
 
     val categoryList = state.categoryList
+
     Scaffold(
         modifier = modifier.fillMaxSize(),
         topBar = { TopBar(avatar = state.avatar, name = state.userName, onProfileClick = onProfileClick) }
@@ -51,15 +70,20 @@ fun HomeScreen(state: HomeState, modifier: Modifier = Modifier, paddingValues: P
                 .padding(padding)
                 .padding(top = 10.dp)
         ) {
-            items(categoryList){
+            items(categoryList, key = {it.value}){
                 QuizTypeCard(
                     modifier = Modifier.padding(
-                        top = if (isOdd(categoryList.indexOf(it))){ 20.dp }else { 0.dp }
-                    ),
+                        top = if (isOdd(categoryList.indexOf(it))) {
+                            20.dp
+                        } else {
+                            0.dp
+                        }
+                    ).animateItem(),
                     category = it,
                     createQuiz = createQuiz,
-
+                    animatedVisibilityScope = animatedVisibilityScope
                 )
+
             }
         }
     }
@@ -67,8 +91,15 @@ fun HomeScreen(state: HomeState, modifier: Modifier = Modifier, paddingValues: P
 }
 
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
-fun QuizTypeCard(modifier: Modifier = Modifier, category: QuizCategory, createQuiz:(String) -> Unit) {
+fun SharedTransitionScope.QuizTypeCard(
+    modifier: Modifier = Modifier,
+    category: QuizCategory,
+    createQuiz:(String, Int) -> Unit,
+    animatedVisibilityScope: AnimatedVisibilityScope
+) {
+
     Box(modifier = modifier
         .aspectRatio(0.8f)
         .padding(horizontal = 8.dp)){
@@ -76,17 +107,23 @@ fun QuizTypeCard(modifier: Modifier = Modifier, category: QuizCategory, createQu
             .fillMaxWidth()
             .fillMaxHeight(0.8f)
             .align(Alignment.BottomCenter)){
-            Column(Modifier.fillMaxSize().padding(10.dp), verticalArrangement = Arrangement.Bottom) {
+            Column(
+                Modifier
+                    .fillMaxSize()
+                    .padding(10.dp), verticalArrangement = Arrangement.Bottom) {
                 Text(text = category.displayName, style = MaterialTheme.typography.titleMedium, maxLines = 2)
-                OutlinedButton(onClick = {createQuiz(category.value)}, modifier = Modifier.fillMaxWidth()) {
-                    Text(text = "Play Now", style = MaterialTheme.typography.bodyMedium
-                    )
-                   }
+                PlayNowButton(category = category, createQuiz = createQuiz)
             }
         }
 
         Image(
-            modifier = Modifier.align(Alignment.TopStart).fillMaxSize(0.6f),
+            modifier = Modifier
+                .fillMaxSize(0.6f)
+                .sharedBounds(
+                    sharedContentState = rememberSharedContentState(key = "img/${category.imgRes}"),
+                    animatedVisibilityScope = animatedVisibilityScope
+                )
+                .align(Alignment.TopStart),
             painter = painterResource(category.imgRes),
             contentDescription = null,
             alignment = Alignment.TopStart,
@@ -94,6 +131,38 @@ fun QuizTypeCard(modifier: Modifier = Modifier, category: QuizCategory, createQu
         )
     }
 
+}
+
+@OptIn(ExperimentalComposeUiApi::class)
+@Composable
+fun PlayNowButton(modifier: Modifier = Modifier, createQuiz: (String, Int) -> Unit, category: QuizCategory) {
+
+    val selected = remember { mutableStateOf(false) }
+    val scale = animateFloatAsState(if(selected.value) 0.8f else 1f)
+
+
+    OutlinedButton(
+        onClick = { },
+        modifier = Modifier
+            .fillMaxWidth()
+            .scale(scale.value)
+            .pointerInteropFilter{
+                when (it.action) {
+                    MotionEvent.ACTION_DOWN -> {
+                        selected.value = true
+                    }
+                    MotionEvent.ACTION_UP -> {
+                        selected.value = false
+                        createQuiz(category.value, category.imgRes)
+                    }
+                }
+                true
+
+            }
+    ) {
+        Text(text = stringResource(R.string.play_now), style = MaterialTheme.typography.bodyMedium
+        )
+    }
 }
 
 @Preview
@@ -108,7 +177,7 @@ fun TopBar(modifier: Modifier = Modifier, onProfileClick:() -> Unit, avatar: Int
     TopAppBar(
         title = {
             Column(){
-                Text(text = "Welcome", style = MaterialTheme.typography.titleSmall)
+                Text(text = stringResource(R.string.welcome), style = MaterialTheme.typography.titleSmall)
                 Text(text = name, style = MaterialTheme.typography.titleLarge)
             }
         },
@@ -116,7 +185,9 @@ fun TopBar(modifier: Modifier = Modifier, onProfileClick:() -> Unit, avatar: Int
             IconButton(onClick = {onProfileClick()}) {
                 Image(
                     painter = painterResource(avatar),
-                    modifier = Modifier.size(50.dp).clip(CircleShape),
+                    modifier = Modifier
+                        .size(50.dp)
+                        .clip(CircleShape),
                     contentScale = ContentScale.Crop,
                     contentDescription = null
             ) }

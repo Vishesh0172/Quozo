@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.text.DateFormat.getDateInstance
 import javax.inject.Inject
 
 @HiltViewModel
@@ -24,6 +25,7 @@ class CreateQuizViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle
 ): ViewModel(){
 
+    private val dateFormatter = getDateInstance()
     private val category = savedStateHandle.toRoute<CreateQuizRoute>().category
     private val _state = MutableStateFlow<CreateQuizState>(CreateQuizState(category = category))
     private val _quizId = MutableStateFlow<Long?>(null)
@@ -31,29 +33,35 @@ class CreateQuizViewModel @Inject constructor(
         state.copy(quizId = quizId)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), CreateQuizState())
 
-//    fun init(category: String){
-//        _state.update { it.copy(category = category) }
-//    }
-
 
     fun onEvent(event: CreateQuizEvent){
         when(event) {
             is CreateQuizEvent.CreateQuiz -> {
-                viewModelScope.launch{
 
-                    val questionIds = apiRepository.getQuestionIds(
-                        category = state.value.category.lowercase(),
-                        difficulty = state.value.difficulty.lowercase(),
-                        limit = state.value.questionLimit
-                    )
+                viewModelScope.launch {
+                    try {
 
-                    val quiz = Quiz(
-                        category = state.value.category,
-                        questionIds = questionIds,
-                        timeLimit = state.value.timeLimit
-                    )
-                    val quizId = dao.upsertQuiz(quiz)
-                    _quizId.update { quizId }
+                        val date = dateFormatter.format(System.currentTimeMillis())
+                        val questionIds = apiRepository.getQuestionIds(
+                            category = state.value.category.lowercase(),
+                            difficulty = state.value.difficulty.lowercase(),
+                            limit = state.value.questionLimit
+                        )
+
+                        val quiz = Quiz(
+                            category = state.value.category,
+                            timeLimit = state.value.timeLimit,
+                            difficulty = state.value.difficulty,
+                            questionIds = questionIds,
+                            date = date
+                        )
+                        val quizId = dao.upsertQuiz(quiz)
+                        _state.update { it.copy(errorMessage = null) }
+                        _quizId.update { quizId }
+
+                    }catch (e: Exception){
+                        _state.update { it.copy(errorMessage = "Some Error Occurred", showDialog = true) }
+                    }
                 }
             }
 
@@ -83,6 +91,8 @@ class CreateQuizViewModel @Inject constructor(
                 it.copy(
                     timeLimit = if(currentTimeLimit == 60) 60 else currentTimeLimit + 5
                 ) }
+
+            CreateQuizEvent.DismissDialog -> _state.update { it.copy(showDialog = false) }
         }
     }
 }
@@ -94,7 +104,9 @@ data class CreateQuizState(
     val questionLimit: Int = 5,
     val timeLimit: Int  = 10,
     val difficulty: String = "Medium",
-    val buttonEnabled: Boolean = true
+    val buttonEnabled: Boolean = true,
+    val errorMessage: String? = null,
+    val showDialog: Boolean = false
 )
 
 sealed interface CreateQuizEvent{
@@ -103,4 +115,5 @@ sealed interface CreateQuizEvent{
     data object MinusTimeLimit: CreateQuizEvent
     data class Difficulty(val value: String): CreateQuizEvent
     data object CreateQuiz: CreateQuizEvent
+    data object DismissDialog: CreateQuizEvent
 }

@@ -1,9 +1,11 @@
 package com.example.quozo.models
 
-import androidx.annotation.DrawableRes
+import androidx.compose.runtime.Immutable
 
+
+@Immutable
 data class QuizCategory(
     val displayName: String,
     val value: String = displayName.lowercase(),
-    @DrawableRes val imgRes: Int
+    val imgRes: Int
 )

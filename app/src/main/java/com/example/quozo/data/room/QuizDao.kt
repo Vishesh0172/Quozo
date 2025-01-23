@@ -1,6 +1,7 @@
 package com.example.quozo.data.room
 
 import androidx.room.Dao
+import androidx.room.Delete
 import androidx.room.Query
 import androidx.room.Upsert
 
@@ -33,5 +34,8 @@ interface QuizDao {
 
     @Query("SELECT * from quiz")
     suspend fun getAllQuiz() : List<Quiz>
+
+    @Delete
+    suspend fun deleteQuiz(quiz: Quiz)
 
 }

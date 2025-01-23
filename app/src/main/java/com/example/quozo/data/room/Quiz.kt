@@ -12,7 +12,9 @@ data class Quiz(
     val questionsAnswered: Int = 0,
     val status: Boolean = false,
     val score: Int = 0,
-    val timeLimit: Int = 0
+    val timeLimit: Int = 0,
+    val difficulty: String = "",
+    val date: String = ""
 )
 
 
