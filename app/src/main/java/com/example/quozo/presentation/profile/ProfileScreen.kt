@@ -9,7 +9,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
@@ -42,13 +41,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.ProgressIndicatorDefaults
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -62,7 +61,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.example.quozo.R
@@ -72,14 +70,14 @@ import com.example.quozo.models.QuizCategory
 import kotlinx.coroutines.launch
 
 @Composable
-fun ProfileScreen(modifier: Modifier = Modifier, state: ProfileState, continueQuiz: (Long) -> Unit, onEvent:(ProfileEvent) -> Unit) {
+fun ProfileScreen(modifier: Modifier = Modifier, state: ProfileState, continueQuiz: (Long) -> Unit, onEvent:(ProfileEvent) -> Unit, viewDetails: (Long) -> Unit) {
 
-    var selectedTabIndex by remember { mutableStateOf(0) }
+    var selectedTabIndex by remember { mutableIntStateOf(0) }
     var showAvatarDialog by remember { mutableStateOf(false) }
     var showNameDialog by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
     val titles = listOf<String>("Incomplete", "Complete")
-    val pagerState = rememberPagerState() { 2 }
+    val pagerState = rememberPagerState { 2 }
     val coroutineScope = rememberCoroutineScope()
 
     if (showAvatarDialog)
@@ -105,7 +103,7 @@ fun ProfileScreen(modifier: Modifier = Modifier, state: ProfileState, continueQu
             confirmButton = {
                 TextButton(onClick = {
                     showDeleteDialog = false
-                    onEvent(ProfileEvent.deleteQuiz)
+                    onEvent(ProfileEvent.DeleteQuiz)
                 }) { Text("Confirm")}
             },
             dismissButton = {
@@ -176,7 +174,8 @@ fun ProfileScreen(modifier: Modifier = Modifier, state: ProfileState, continueQu
                         showDeleteDialog = {
                             onEvent(ProfileEvent.ShowDialog(it))
                             showDeleteDialog = true
-                        }
+                        },
+                        viewDetails = {}
                     )
                     selectedTabIndex = 0
                 }
@@ -189,7 +188,8 @@ fun ProfileScreen(modifier: Modifier = Modifier, state: ProfileState, continueQu
                         showDeleteDialog = {
                             onEvent(ProfileEvent.ShowDialog(it))
                             showDeleteDialog = true
-                        }
+                        },
+                        viewDetails = viewDetails
                     )
                     selectedTabIndex = 1
                 }
@@ -205,7 +205,7 @@ fun ProfileScreen(modifier: Modifier = Modifier, state: ProfileState, continueQu
 
 
 @Composable
-fun QuizList(modifier: Modifier = Modifier, items: List<Quiz>, categoryList: List<QuizCategory>, continueQuiz: (Long) -> Unit, showDeleteDialog: (Quiz) -> Unit) {
+fun QuizList(modifier: Modifier = Modifier, items: List<Quiz>, categoryList: List<QuizCategory>, continueQuiz: (Long) -> Unit, showDeleteDialog: (Quiz) -> Unit, viewDetails: (Long) -> Unit) {
 
     LazyColumn (modifier = modifier, state = rememberLazyListState()){
         items(items, key = {it.quizId}){ quiz ->
@@ -220,7 +220,8 @@ fun QuizList(modifier: Modifier = Modifier, items: List<Quiz>, categoryList: Lis
                     .animateItem(),
                 displayName = displayName,
                 continueQuiz = continueQuiz,
-                showDeleteDialog = showDeleteDialog
+                showDeleteDialog = showDeleteDialog,
+                viewDetails = viewDetails
             )
         }
     }
@@ -228,13 +229,21 @@ fun QuizList(modifier: Modifier = Modifier, items: List<Quiz>, categoryList: Lis
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun QuizItem(modifier: Modifier = Modifier, quiz: Quiz, @DrawableRes imgId: Int, displayName: String, continueQuiz:(Long) -> Unit, showDeleteDialog:(Quiz) -> Unit) {
+fun QuizItem(
+    modifier: Modifier = Modifier,
+    quiz: Quiz,
+    @DrawableRes imgId: Int,
+    displayName: String,
+    continueQuiz: (Long) -> Unit,
+    showDeleteDialog: (Quiz) -> Unit,
+    viewDetails: (Long) -> Unit
+) {
 
     val progressFloat = quiz.questionsAnswered.toFloat()/quiz.questionIds.size.toFloat()
     var expanded by remember { mutableStateOf(false) }
     val animatedProgress = animateFloatAsState(
         targetValue = progressFloat,
-        animationSpec = ProgressIndicatorDefaults.ProgressAnimationSpec
+        animationSpec = ProgressIndicatorDefaults.ProgressAnimationSpec, label = ""
     ).value
     val quizComplete = quiz.status == Status.COMPLETE.value
 
@@ -282,17 +291,12 @@ fun QuizItem(modifier: Modifier = Modifier, quiz: Quiz, @DrawableRes imgId: Int,
                             .height(8.5.dp)
                     )
                 else
-                    FlowRow(horizontalArrangement = Arrangement.SpaceAround, modifier = Modifier.fillMaxWidth()) {
-                        AssistChip(
-                            onClick = {},
-                            label = { Text(text = quiz.difficulty) }
-                        )
 
-                        AssistChip(
-                            onClick = {},
-                            label = { Text(text = "Score:${quiz.score} 100000") }
-                        )
-                    }
+                    AssistChip(
+                        onClick = {},
+                        label = { Text(text = quiz.difficulty) }
+                    )
+
 
 
 
@@ -318,14 +322,17 @@ fun QuizItem(modifier: Modifier = Modifier, quiz: Quiz, @DrawableRes imgId: Int,
                             contentColor = MaterialTheme.colorScheme.onErrorContainer
                         ),) { Text(text = stringResource(R.string.delete)) }
 
-                    if (!quizComplete)
+
                         OutlinedButton(
                             modifier = Modifier.wrapContentHeight(),
                             onClick = {
-                                continueQuiz(quiz.quizId.toLong())
+                                if (quizComplete)
+                                    viewDetails(quiz.quizId.toLong())
+                                else
+                                    continueQuiz(quiz.quizId.toLong())
                             },
                             colors = ButtonDefaults.outlinedButtonColors(),
-                        ) { Text(text = "Continue" ) }
+                        ) { Text(text = if (quizComplete) "View Details" else "Continue" ) }
                 }
 
             }
@@ -338,7 +345,7 @@ fun QuizItem(modifier: Modifier = Modifier, quiz: Quiz, @DrawableRes imgId: Int,
 @Composable
 fun AvatarDialog(modifier: Modifier = Modifier, avatarList: List<Int>, updateAvatar:(ProfileEvent) -> Unit, onDismiss:() -> Unit) {
 
-    var selectedImage by remember { mutableStateOf(avatarList[0]) }
+    var selectedImage by remember { mutableIntStateOf(avatarList[0]) }
 
     Dialog(onDismissRequest = {onDismiss()}) {
 
@@ -349,7 +356,14 @@ fun AvatarDialog(modifier: Modifier = Modifier, avatarList: List<Int>, updateAva
                 .fillMaxSize()
                 .padding(10.dp),
                 verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally){
-                Image( painter = painterResource(selectedImage), contentDescription = null, modifier = Modifier.weight(4f))
+                Image(
+                    painter = painterResource(selectedImage),
+                    contentDescription = null,
+                    modifier = Modifier
+                        .clip(CircleShape)
+                        .weight(4f),
+                    contentScale = ContentScale.Crop
+                )
                 Row (modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f),
@@ -359,7 +373,10 @@ fun AvatarDialog(modifier: Modifier = Modifier, avatarList: List<Int>, updateAva
                         Image(
                             painter = painterResource(avatarId),
                             contentDescription = null,
+                            contentScale = ContentScale.Crop,
                             modifier = Modifier
+                                .size(34.dp)
+                                .clip(CircleShape)
                                 .border(
                                     shape = CircleShape,
                                     width = if (imageSelected) 2.dp else 0.dp,
@@ -370,7 +387,7 @@ fun AvatarDialog(modifier: Modifier = Modifier, avatarList: List<Int>, updateAva
                     }
                 }
                 Button(onClick = {
-                    updateAvatar(ProfileEvent.updateAvatar(selectedImage))
+                    updateAvatar(ProfileEvent.UpdateAvatar(selectedImage))
                     onDismiss()
                 }, 
                     modifier = Modifier.padding(10.dp)
@@ -410,7 +427,7 @@ fun UserNameDialog(modifier: Modifier = Modifier, name: String, onDismiss: () ->
                     modifier = Modifier.padding(10.dp))
                 Button(
                     onClick = {
-                        onEvent(ProfileEvent.updateUserName(nameState))
+                        onEvent(ProfileEvent.UpdateUserName(nameState))
                         onDismiss()
                     },
                     modifier = Modifier.padding(10.dp)
@@ -419,20 +436,5 @@ fun UserNameDialog(modifier: Modifier = Modifier, name: String, onDismiss: () ->
             }
         }
 
-    }
-}
-
-
-@Preview
-@Composable
-fun QuizItemPreview(modifier: Modifier = Modifier) {
-    val questionList = listOf<String>("", "")
-    Surface {
-        QuizItem(
-            quiz = Quiz(category = "Sports", questionsAnswered = 1, questionIds = questionList),
-            imgId = R.drawable.sports_icon2,
-            displayName = "",
-            continueQuiz = {}
-        ){}
     }
 }

@@ -45,20 +45,20 @@ class ProfileViewModel @Inject constructor(
 
     fun onEvent(event: ProfileEvent){
         when(event){
-            is ProfileEvent.updateAvatar -> {
+            is ProfileEvent.UpdateAvatar -> {
                 viewModelScope.launch{
                     dataStoreRepository.updateAvatar(event.id)
                 }
 
             }
-            is ProfileEvent.updateUserName -> {
+            is ProfileEvent.UpdateUserName -> {
                 viewModelScope.launch{
                     dataStoreRepository.updateUserName(event.name)
                 }
 
             }
 
-            is ProfileEvent.deleteQuiz -> {
+            is ProfileEvent.DeleteQuiz -> {
                 viewModelScope.launch{
                     quizDao.deleteQuiz(state.value.quizToDelete!!)
                     _state.update { it.copy(
@@ -97,9 +97,9 @@ data class ProfileState(
 )
 
 sealed interface ProfileEvent{
-    data class updateAvatar(val id: Int): ProfileEvent
-    data object deleteQuiz: ProfileEvent
-    data class updateUserName(val name: String): ProfileEvent
+    data class UpdateAvatar(val id: Int): ProfileEvent
+    data object DeleteQuiz: ProfileEvent
+    data class UpdateUserName(val name: String): ProfileEvent
     data class ShowDialog(val quiz: Quiz): ProfileEvent
     data object DismissDialog: ProfileEvent
 }

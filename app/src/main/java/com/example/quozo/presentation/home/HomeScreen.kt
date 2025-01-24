@@ -9,7 +9,6 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -41,7 +40,6 @@ import androidx.compose.ui.input.pointer.pointerInteropFilter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.quozo.R
 import com.example.quozo.models.QuizCategory
@@ -51,7 +49,6 @@ import com.example.quozo.models.QuizCategory
 fun SharedTransitionScope.HomeScreen(
     state: HomeState,
     modifier: Modifier = Modifier,
-    paddingValues: PaddingValues,
     createQuiz: (String, Int) -> Unit, onProfileClick: () -> Unit,
     animatedVisibilityScope: AnimatedVisibilityScope
 ) {
@@ -138,12 +135,12 @@ fun SharedTransitionScope.QuizTypeCard(
 fun PlayNowButton(modifier: Modifier = Modifier, createQuiz: (String, Int) -> Unit, category: QuizCategory) {
 
     val selected = remember { mutableStateOf(false) }
-    val scale = animateFloatAsState(if(selected.value) 0.8f else 1f)
+    val scale = animateFloatAsState(if(selected.value) 0.8f else 1f, label = "")
 
 
     OutlinedButton(
         onClick = { },
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .scale(scale.value)
             .pointerInteropFilter{
@@ -165,18 +162,14 @@ fun PlayNowButton(modifier: Modifier = Modifier, createQuiz: (String, Int) -> Un
     }
 }
 
-@Preview
-@Composable
-fun HomePreview(modifier: Modifier = Modifier, ) {
-    //HomeScreen(paddingValues = PaddingValues(10.dp)){}
-}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TopBar(modifier: Modifier = Modifier, onProfileClick:() -> Unit, avatar: Int, name: String) {
     TopAppBar(
+        modifier = modifier,
         title = {
-            Column(){
+            Column{
                 Text(text = stringResource(R.string.welcome), style = MaterialTheme.typography.titleSmall)
                 Text(text = name, style = MaterialTheme.typography.titleLarge)
             }
@@ -196,8 +189,5 @@ fun TopBar(modifier: Modifier = Modifier, onProfileClick:() -> Unit, avatar: Int
 }
 
 private fun isOdd(index: Int): Boolean{
-    if (index>0 && index%2 != 0){
-        return true
-    }
-    return false
+    return index>0 && index%2 != 0
 }

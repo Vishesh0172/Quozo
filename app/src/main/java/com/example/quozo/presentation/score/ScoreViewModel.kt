@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
+import com.example.quozo.data.local.CategoryDatabase
 import com.example.quozo.data.room.QuizDao
 import com.example.quozo.presentation.navigation.ScoreRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -16,7 +17,8 @@ import javax.inject.Inject
 @HiltViewModel
 class ScoreViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
-    quizDao: QuizDao
+    quizDao: QuizDao,
+    categoryDatabase: CategoryDatabase
 ): ViewModel() {
 
     private val quizId = savedStateHandle.toRoute<ScoreRoute>().quizId
@@ -26,10 +28,11 @@ class ScoreViewModel @Inject constructor(
     init {
         viewModelScope.launch{
             val quiz = quizDao.getQuiz(quizId)
+            val category = categoryDatabase.categoryList.find { it.value == quiz.category }?.displayName!!
             _state.update { it.copy(
                 score = quiz.score,
                 date = quiz.date,
-                category = quiz.category,
+                category = category,
                 difficulty = quiz.difficulty,
                 questions = quiz.questionIds.size.toString()
             )}

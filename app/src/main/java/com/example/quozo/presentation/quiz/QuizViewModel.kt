@@ -23,6 +23,8 @@ import okio.IOException
 import javax.inject.Inject
 import kotlin.random.Random
 
+private const val SCORE_INCREMENT = 50
+
 @HiltViewModel
 class QuizViewModel @Inject constructor(
     private val quizDao: QuizDao,
@@ -32,6 +34,7 @@ class QuizViewModel @Inject constructor(
 ): ViewModel(){
 
     private val quizId = savedStateHandle.toRoute<QuizRoute>().quizId
+
     private lateinit var quiz: Quiz
     private val _state = MutableStateFlow(QuizState(quizId = quizId))
     val state = _state.asStateFlow()
@@ -62,12 +65,12 @@ class QuizViewModel @Inject constructor(
                 }
 
                 if(state.value.selectedAnswer == state.value.correctAnswer){
-                    _state.update { it.copy(answerState = AnswerState.CorrectAnswer, score = state.value.score + 20) }
+                    _state.update { it.copy(answerState = AnswerState.CorrectAnswer, score = state.value.score + SCORE_INCREMENT) }
                 }else
                     _state.update { it.copy(answerState = AnswerState.WrongAnswer) }
 
                 val progress: Float = (state.value.currentQuestionIndex.toFloat() + 1f)/quiz.questionIds.size.toFloat()
-                _state.update { it.copy(submitted = true, progress = progress) }
+                _state.update { it.copy(submitted = true, progress = progress, buttonEnabled = true) }
 
 
                 viewModelScope.launch {
@@ -102,9 +105,9 @@ class QuizViewModel @Inject constructor(
 
             }
 
-            is QuizEvent.SelectAnswer -> _state.update { it.copy(selectedAnswer = event.value) }
+            is QuizEvent.SelectAnswer -> _state.update { it.copy(selectedAnswer = event.value, buttonEnabled = true) }
 
-            QuizEvent.QuizComplete -> _state.update { it.copy(quizComplete = true) }
+            QuizEvent.QuizComplete -> _state.update { it.copy(quizComplete = true, buttonEnabled = true) }
             QuizEvent.Retry -> viewModelScope.launch{
                 _state.update { it.copy(loadingState = LoadingState.Loading) }
                 val questionId = quiz.questionIds[state.value.currentQuestionIndex]
@@ -148,6 +151,7 @@ class QuizViewModel @Inject constructor(
 
             _state.update {
                 it.copy(
+                    buttonEnabled = false,
                     time = quiz.timeLimit,
                     timerProgress = 1f,
                     allOptions = newList,
@@ -158,7 +162,7 @@ class QuizViewModel @Inject constructor(
                 )
             }
             startTimer()
-        }catch (e: IOException){
+        }catch (_: IOException){
             _state.update { it.copy(loadingState = LoadingState.Error) }
         }
 
@@ -186,14 +190,14 @@ data class QuizState(
     val score: Int = 0,
     val time: Int = 0,
     val quizId: Long = 0L,
-    //val timeLimit: Int = 0,
     val incorrectAnswers: List<String> = emptyList(),
     val correctAnswer: String = "",
     val question: String = "",
     val submitted: Boolean = false,
     val progress: Float = 0f,
     val timerProgress: Float = 1f,
-    val loadingState: LoadingState = LoadingState.Loading
+    val loadingState: LoadingState = LoadingState.Loading,
+    val buttonEnabled: Boolean = false
 )
 
 sealed interface AnswerState{

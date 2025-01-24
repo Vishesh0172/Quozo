@@ -4,12 +4,12 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.core.updateTransition
 import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ElevatedButton
@@ -25,18 +25,21 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.quozo.R
+import com.example.quozo.presentation.components.BackgroundAnimation
 import kotlinx.coroutines.delay
 
 @Composable
-fun ScoreScreen(modifier: Modifier = Modifier,state: ScoreState) {
+fun ScoreScreen(modifier: Modifier = Modifier,state: ScoreState, navigateUp:() -> Unit) {
 
     var showScore by remember { mutableStateOf(false) }
     var showButton by remember { mutableStateOf(false) }
     var showDetails by remember { mutableStateOf(false) }
     val scale = remember { Animatable(1f) }
-    val transition = updateTransition(targetState = scale)
 
 
 
@@ -52,12 +55,7 @@ fun ScoreScreen(modifier: Modifier = Modifier,state: ScoreState) {
 
     Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center){
 
-//        (
-//            targetState = scale,
-//            transitionSpec = {
-//                slideInVertically() togetherWith ExitTransition.None
-//            }
-//        ) { scale ->
+        BackgroundAnimation(modifier = Modifier.fillMaxSize())
             Box(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
@@ -80,18 +78,19 @@ fun ScoreScreen(modifier: Modifier = Modifier,state: ScoreState) {
                         Text(
                             modifier = Modifier.padding(26.dp),
                             text = state.score.toString(),
-                            fontSize = 130.sp
+                            fontSize = 130.sp,
+                            fontFamily = FontFamily(Font(R.font.ubuntu_regular))
                         )
+
 
                         AnimatedVisibility(
                             visible = showDetails,
                             enter = slideInVertically(tween(800)){it}
                         ) {
-                            Column {
-                                Text("Date: ${state.date}")
-                                Text("Difficulty: ${state.difficulty}")
-                                Text("Questions: ${state.questions}")
-                                Text("Category: ${state.category}")
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text("Difficulty: ${state.difficulty}", style = MaterialTheme.typography.bodyMedium)
+                                Text("Questions: ${state.questions}", style = MaterialTheme.typography.bodyMedium)
+                                Text("Category: ${state.category}", style = MaterialTheme.typography.bodyMedium)
                             }
                         }
                     }
@@ -101,11 +100,11 @@ fun ScoreScreen(modifier: Modifier = Modifier,state: ScoreState) {
         }
 
         AnimatedVisibility(
-            modifier = Modifier.align(Alignment.BottomCenter),
+            modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(bottom = 32.dp, start = 12.dp, end = 12.dp),
             visible = showButton,
             enter = slideInVertically(tween(600)){it}
         ) {
-            ElevatedButton(onClick = {}) { Text(text = "Continue")}
+            ElevatedButton(onClick = {navigateUp()}) { Text(text = "Continue")}
         }
     }
 }

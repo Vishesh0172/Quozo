@@ -61,6 +61,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.quozo.R
+import com.example.quozo.presentation.components.CircularProgressDialog
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
 @Composable
@@ -76,17 +77,15 @@ fun SharedTransitionScope.CreateQuizScreen(
 
 
     LaunchedEffect(state.quizId) {
-        if (state.quizId!=null)
+        if (state.quizId!=null) {
             navigateToQuiz(state.quizId)
+        }
     }
-
-
-
 
     var dropDownState by remember {  mutableStateOf(false) }
 
 
-    if (state.showDialog){
+    if (state.showErrorDialog){
 
         AlertDialog(
             onDismissRequest = {onEvent(CreateQuizEvent.DismissDialog)},
@@ -94,6 +93,9 @@ fun SharedTransitionScope.CreateQuizScreen(
             title = {Text(text = state.errorMessage!!)}
         )
     }
+
+    if (state.showLoadingDialog)
+        CircularProgressDialog (modifier = modifier){  }
 
     Column (modifier = modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center){
 

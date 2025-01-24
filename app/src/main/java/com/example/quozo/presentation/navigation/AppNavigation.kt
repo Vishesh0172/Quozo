@@ -44,6 +44,7 @@ fun AppNavigation(modifier: Modifier = Modifier, paddingValues: PaddingValues) {
 
     SharedTransitionLayout{
         NavHost(
+            modifier = modifier,
             navController = navController,
             startDestination = "OnBoardingNav",
         ) {
@@ -83,7 +84,6 @@ fun AppNavigation(modifier: Modifier = Modifier, paddingValues: PaddingValues) {
                     val viewModel: HomeViewModel = hiltViewModel()
                     val state by viewModel.state.collectAsStateWithLifecycle()
                     HomeScreen(
-                        paddingValues = paddingValues,
                         state = state,
                         onProfileClick = { navController.navigate("ProfileRoute") },
                         createQuiz = { category, img ->
@@ -110,7 +110,7 @@ fun AppNavigation(modifier: Modifier = Modifier, paddingValues: PaddingValues) {
                         modifier = Modifier.padding(paddingValues),
                         navigateToQuiz = { quizId ->
                             navController.navigate(AnimationRoute(quizId = quizId)) {
-                                popUpTo<CreateQuizRoute>() {
+                                popUpTo<CreateQuizRoute> {
                                     inclusive = true
                                 }
 
@@ -122,11 +122,11 @@ fun AppNavigation(modifier: Modifier = Modifier, paddingValues: PaddingValues) {
                     )
                 }
 
-                composable<AnimationRoute>() {
+                composable<AnimationRoute> {
                     val args = it.toRoute<AnimationRoute>()
                     CountdownAnimation(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
                         navController.navigate(QuizRoute(args.quizId)) {
-                            popUpTo<AnimationRoute>() {
+                            popUpTo<AnimationRoute> {
                                 inclusive = true
                             }
                         }
@@ -142,7 +142,7 @@ fun AppNavigation(modifier: Modifier = Modifier, paddingValues: PaddingValues) {
                         onEvent = viewModel::onEvent,
                         navigateToScore = { score ->
                             navController.navigate(ScoreRoute(state.quizId)) {
-                                popUpTo<QuizRoute>() { inclusive = true }
+                                popUpTo<QuizRoute> { inclusive = true }
                             }
                         },
                         onDialogDismiss = {
@@ -154,7 +154,7 @@ fun AppNavigation(modifier: Modifier = Modifier, paddingValues: PaddingValues) {
                 composable<ScoreRoute> {
                     val viewModel: ScoreViewModel = hiltViewModel()
                     val state by viewModel.state.collectAsStateWithLifecycle()
-                    ScoreScreen(state = state, modifier = Modifier.padding(paddingValues))
+                    ScoreScreen(state = state, modifier = Modifier.padding(paddingValues), navigateUp = {navController.navigateUp()})
                 }
 
                 composable(
@@ -170,7 +170,10 @@ fun AppNavigation(modifier: Modifier = Modifier, paddingValues: PaddingValues) {
                         },
                         state = state,
                         modifier = Modifier.padding(paddingValues),
-                        onEvent = viewModel::onEvent
+                        onEvent = viewModel::onEvent,
+                        viewDetails = {quizId ->
+                            navController.navigate(ScoreRoute(quizId = quizId)) { }
+                        }
                     )
                 }
 

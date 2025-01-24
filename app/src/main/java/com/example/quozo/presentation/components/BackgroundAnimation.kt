@@ -22,6 +22,13 @@ fun BackgroundAnimation(modifier: Modifier = Modifier) {
         composition = composition,
         iterations = LottieConstants.IterateForever
     )
-    LottieAnimation(progress = {progress}, composition = composition, contentScale = ContentScale.Crop, modifier = modifier.fillMaxSize().alpha(0.65f),)
+    LottieAnimation(
+        progress = { progress },
+        composition = composition,
+        contentScale = ContentScale.Crop,
+        modifier = modifier
+            .fillMaxSize()
+            .alpha(0.65f)
+    )
 
 }

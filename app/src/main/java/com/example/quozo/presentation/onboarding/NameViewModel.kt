@@ -52,7 +52,7 @@ class NameViewModel @Inject constructor(
                             event.value
                     )
                 }
-                _state.update { it.copy(buttonEnabled = if (state.value.name.length >= 2 && state.value.name.length <= 15) true else false) }
+                _state.update { it.copy(buttonEnabled = state.value.name.length >= 2 && state.value.name.length <= 15) }
         }
 
         }

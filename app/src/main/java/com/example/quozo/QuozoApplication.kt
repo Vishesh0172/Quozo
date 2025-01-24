@@ -15,7 +15,7 @@ class QuozoApplication: Application() {
             val channel = NotificationChannel(
                 "timer_channel",
                 "Timer Notifications",
-                NotificationManager.IMPORTANCE_HIGH
+                NotificationManager.IMPORTANCE_LOW
             )
             val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
             notificationManager.createNotificationChannel(channel)

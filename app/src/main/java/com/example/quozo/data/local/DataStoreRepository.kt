@@ -19,13 +19,13 @@ class DataStoreRepository(
     private val context: Context
 ) {
 
-    val AVATAR_ID = intPreferencesKey("avatarId")
-    val USER_NAME = stringPreferencesKey("userName")
+    val avatarId = intPreferencesKey("avatarId")
+    val userName = stringPreferencesKey("userName")
 
     val userFlow: Flow<User> = context.dataStore.data.map { preferences ->
         User(
-            avatarId = preferences[AVATAR_ID] ?: R.drawable.avatar_male,
-            name = preferences[USER_NAME] ?: ""
+            avatarId = preferences[avatarId] ?: R.drawable.avatar_male,
+            name = preferences[userName] ?: ""
         )
     }
 
@@ -33,13 +33,13 @@ class DataStoreRepository(
 
     suspend fun updateAvatar(avatarId: Int){
         context.dataStore.edit { preferences ->
-            preferences[AVATAR_ID] = avatarId
+            preferences[this@DataStoreRepository.avatarId] = avatarId
         }
     }
 
     suspend fun updateUserName(name: String){
         context.dataStore.edit { preferences ->
-            preferences[USER_NAME] = name
+            preferences[userName] = name
         }
     }
 }

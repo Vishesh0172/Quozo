@@ -38,6 +38,7 @@ class CreateQuizViewModel @Inject constructor(
         when(event) {
             is CreateQuizEvent.CreateQuiz -> {
 
+                _state.update { it.copy(showLoadingDialog = true) }
                 viewModelScope.launch {
                     try {
 
@@ -56,11 +57,11 @@ class CreateQuizViewModel @Inject constructor(
                             date = date
                         )
                         val quizId = dao.upsertQuiz(quiz)
-                        _state.update { it.copy(errorMessage = null) }
+                        _state.update { it.copy(errorMessage = null, showLoadingDialog = false) }
                         _quizId.update { quizId }
 
-                    }catch (e: Exception){
-                        _state.update { it.copy(errorMessage = "Some Error Occurred", showDialog = true) }
+                    }catch (_: Exception){
+                        _state.update { it.copy(errorMessage = "Some Error Occurred", showErrorDialog = true, showLoadingDialog = false) }
                     }
                 }
             }
@@ -78,7 +79,7 @@ class CreateQuizViewModel @Inject constructor(
                             event.value.toInt()
                     },)
                 }
-                _state.update { it.copy(buttonEnabled = if(state.value.questionLimit>=5 && state.value.questionLimit<=30)true else false) }
+                _state.update { it.copy(buttonEnabled = state.value.questionLimit>=5 && state.value.questionLimit<=30) }
             }
 
             is CreateQuizEvent.MinusTimeLimit -> _state.update {
@@ -92,7 +93,7 @@ class CreateQuizViewModel @Inject constructor(
                     timeLimit = if(currentTimeLimit == 60) 60 else currentTimeLimit + 5
                 ) }
 
-            CreateQuizEvent.DismissDialog -> _state.update { it.copy(showDialog = false) }
+            CreateQuizEvent.DismissDialog -> _state.update { it.copy(showErrorDialog = false) }
         }
     }
 }
@@ -106,7 +107,8 @@ data class CreateQuizState(
     val difficulty: String = "Medium",
     val buttonEnabled: Boolean = true,
     val errorMessage: String? = null,
-    val showDialog: Boolean = false
+    val showErrorDialog: Boolean = false,
+    val showLoadingDialog: Boolean = false,
 )
 
 sealed interface CreateQuizEvent{

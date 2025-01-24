@@ -1,6 +1,5 @@
 package com.example.quozo
 
-import android.app.NotificationManager
 import android.app.Service
 import android.content.Intent
 import android.os.IBinder
@@ -19,7 +18,6 @@ class AppService: Service() {
         when(intent?.action){
             Actions.START.toString() -> start(intent.getStringExtra("timerValue"))
             Actions.STOP.toString() -> stopSelf()
-            Actions.UPDATE.toString() -> update(intent.getStringExtra("updatedValue"))
         }
         return super.onStartCommand(intent, flags, startId)
     }
@@ -38,15 +36,7 @@ class AppService: Service() {
     }
 
 
-    private fun update(timeValue: String?){
-        val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
-
-        //notificationManager.notify(0, notification.build())
-
-    }
-
-
     enum class Actions(){
-        START,STOP,UPDATE
+        START,STOP
     }
 }
