@@ -2,6 +2,7 @@ package com.example.quozo.presentation.quiz
 
 import android.content.Context
 import android.content.Intent
+import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -14,9 +15,12 @@ import com.example.quozo.models.LoadingState
 import com.example.quozo.presentation.navigation.QuizRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.cancellable
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import okio.IOException
@@ -34,23 +38,20 @@ class QuizViewModel @Inject constructor(
 ): ViewModel(){
 
     private val quizId = savedStateHandle.toRoute<QuizRoute>().quizId
-
+    private lateinit var timerTask: Job
     private lateinit var quiz: Quiz
     private val _state = MutableStateFlow(QuizState(quizId = quizId))
     val state = _state.asStateFlow()
 
     init {
-        val task = viewModelScope.launch{
+        viewModelScope.launch{
             quiz = quizDao.getQuiz(quizId)
             val progress: Float = (quiz.questionsAnswered.toFloat())/quiz.questionIds.size.toFloat()
             _state.update { it.copy(currentQuestionIndex = quiz.questionsAnswered, time = quiz.timeLimit, questionIds = quiz.questionIds, progress = progress) }
             getQuestionAndUpdateState(quiz.questionIds[quiz.questionsAnswered])
         }
 
-        viewModelScope.launch{
-            task.join()
-            startTimer()
-        }
+
     }
 
 
@@ -59,18 +60,21 @@ class QuizViewModel @Inject constructor(
         when(event){
             QuizEvent.SubmitAnswer -> {
 
+                timerTask.cancel()
+                Log.d("timerTaskCancelled", timerTask.isCancelled.toString())
                 Intent(context, AppService::class.java).also {
                     it.action = AppService.Actions.STOP.toString()
                     context.startService(it)
                 }
+
+                val progress: Float = (state.value.currentQuestionIndex.toFloat() + 1f)/quiz.questionIds.size.toFloat()
+                _state.update { it.copy(submitted = true, progress = progress, buttonEnabled = true) }
 
                 if(state.value.selectedAnswer == state.value.correctAnswer){
                     _state.update { it.copy(answerState = AnswerState.CorrectAnswer, score = state.value.score + SCORE_INCREMENT) }
                 }else
                     _state.update { it.copy(answerState = AnswerState.WrongAnswer) }
 
-                val progress: Float = (state.value.currentQuestionIndex.toFloat() + 1f)/quiz.questionIds.size.toFloat()
-                _state.update { it.copy(submitted = true, progress = progress, buttonEnabled = true) }
 
 
                 viewModelScope.launch {
@@ -85,6 +89,7 @@ class QuizViewModel @Inject constructor(
 
             QuizEvent.NextQuestion -> {
                 _state.update { it.copy(
+                    buttonEnabled = false,
                     submitted = false,
                     answerState = AnswerState.NoAnswer,
                     selectedAnswer = "",
@@ -117,29 +122,51 @@ class QuizViewModel @Inject constructor(
     }
 
 
-    private suspend fun startTimer(){
-
-        var timerValue: Int =  quiz.timeLimit
-        var timerRunning = timerValue >= 0
-        while (timerRunning){
-            if (state.value.submitted == true)
-                break
-            _state.update { it.copy(time = timerValue, timerProgress = timerValue.toFloat() / quiz.timeLimit.toFloat()) }
-            if (timerValue == 0) {
-                onEvent(QuizEvent.SubmitAnswer)
-                break
+    private suspend fun startTimerFlow(){
+        val timeLimit: Int =  quiz.timeLimit
+        flow<Int> {
+            for (i in timeLimit downTo 0) {
+                emit(i)
+                Intent(context, AppService::class.java).also {
+                    it.action = AppService.Actions.START.toString()
+                    it.putExtra("timerValue", i.toString())
+                    context.startService(it)
+                }
+                Log.d("Timer Value emitted", i.toString())
+                if (i == 0)
+                    onEvent(QuizEvent.SubmitAnswer)
+                else
+                    delay(1000)
             }
-            Intent(context, AppService::class.java).also {
-                it.action = AppService.Actions.START.toString()
-                it.putExtra("timerValue", timerValue.toString())
-                context.startService(it)
-            }
-            delay(1000L)
-            timerValue = timerValue - 1
-
-
+        }
+        .cancellable()
+        .collect { value ->
+            Log.d("Timer Value", value.toString())
+            _state.update { it.copy(time = value, timerProgress = value.toFloat() / quiz.timeLimit.toFloat()) }
         }
     }
+
+//    private suspend fun startTimer(){
+//
+//        var timerValue: Int =  quiz.timeLimit
+//        var timerRunning = timerValue >= 0
+//        while (state.value.submitted == false){
+//            _state.update { it.copy(time = timerValue, timerProgress = timerValue.toFloat() / quiz.timeLimit.toFloat()) }
+//            if (timerValue == 0) {
+//                onEvent(QuizEvent.SubmitAnswer)
+//                break
+//            }
+//            Intent(context, AppService::class.java).also {
+//                it.action = AppService.Actions.START.toString()
+//                it.putExtra("timerValue", timerValue.toString())
+//                context.startService(it)
+//            }
+//            delay(1000L)
+//            timerValue = timerValue - 1
+//
+//
+//        }
+//    }
 
     private suspend fun getQuestionAndUpdateState(id: String){
 
@@ -161,7 +188,7 @@ class QuizViewModel @Inject constructor(
                     loadingState = LoadingState.Success,
                 )
             }
-            startTimer()
+            timerTask = viewModelScope.launch{startTimerFlow()}
         }catch (_: IOException){
             _state.update { it.copy(loadingState = LoadingState.Error) }
         }

@@ -40,6 +40,7 @@ import androidx.compose.ui.input.pointer.pointerInteropFilter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.quozo.R
 import com.example.quozo.models.QuizCategory
@@ -169,9 +170,9 @@ fun TopBar(modifier: Modifier = Modifier, onProfileClick:() -> Unit, avatar: Int
     TopAppBar(
         modifier = modifier,
         title = {
-            Column{
+            Column(modifier = Modifier.fillMaxWidth(0.9f)){
                 Text(text = stringResource(R.string.welcome), style = MaterialTheme.typography.titleSmall)
-                Text(text = name, style = MaterialTheme.typography.titleLarge)
+                Text(text = name, style = MaterialTheme.typography.titleLarge, overflow = TextOverflow.Ellipsis, maxLines = 1)
             }
         },
         actions = {

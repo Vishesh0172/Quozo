@@ -3,4 +3,21 @@
     <string name="welcome">Welcome</string>
     <string name="play_now">Play Now</string>
     <string name="delete">Delete</string>
+    <string name="incomplete">Incomplete</string>
+    <string name="complete">Complete</string>
+    <string name="update">Update</string>
+    <string name="update_avatar">Update Avatar</string>
+    <string name="confirm">Confirm</string>
+    <string name="dismiss">Dismiss</string>
+    <string name="delete_dialog_title">Delete Quiz</string>
+    <string name="delete_dialog_text">Are you sure you want to delete the quiz? All your progress will be lost.</string>
+    <string name="createQuiz_title">Let\'s Play</string>
+    <string name="createQuiz_subHeading">Create Your Quiz</string>
+    <string name="questions_title">Questions</string>
+    <string name="less_questions_error">Can\'t have less than 5 Questions</string>
+    <string name="more_questions_error">Can\'t have more than 30 Questions</string>
+    <string name="start_quiz">Start Quiz</string>
+    <string name="quiz_error_title">Couldn\'t fetch the Question</string>
+    <string name="quiz_error_text">Please Check Your Internet Connection and Try Again</string>
+    <string name="onboarding_title">Let\'s Get Started</string>
 </resources>

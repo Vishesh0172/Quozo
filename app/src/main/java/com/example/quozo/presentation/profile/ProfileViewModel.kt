@@ -88,7 +88,7 @@ class ProfileViewModel @Inject constructor(
 
 data class ProfileState(
     val userName: String = "",
-    @DrawableRes val avatar: Int = R.drawable.ic_launcher_background,
+    @DrawableRes val avatar: Int? = null,
     val incompleteList: SnapshotStateList<Quiz> = mutableStateListOf(),
     val completeList: SnapshotStateList<Quiz> = mutableStateListOf(),
     val categoryList: List<QuizCategory> = emptyList(),

@@ -40,9 +40,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
+import com.example.quozo.R
 import com.example.quozo.models.LoadingState
 
 @Composable
@@ -83,6 +85,21 @@ fun QuizScreen(modifier: Modifier = Modifier, state: QuizState, onEvent:(QuizEve
         ) {
 
 
+            LinearProgressIndicator(
+                color = MaterialTheme.colorScheme.tertiaryContainer,
+                modifier = Modifier.height(10.dp),
+                strokeCap = StrokeCap.Round,
+                progress = {
+                    animatedProgress
+                }
+            )
+
+            Timer(
+                time = state.time,
+                progress = animatedTimerProgress,
+                modifier = Modifier.padding(15.dp)
+            )
+
             when(state.loadingState) {
                 LoadingState.Error -> {
                     AlertDialog(
@@ -91,33 +108,18 @@ fun QuizScreen(modifier: Modifier = Modifier, state: QuizState, onEvent:(QuizEve
                     onDismissRequest = { onDialogDismiss() },
                     confirmButton = { Button(onClick = { onEvent(QuizEvent.Retry) }) { Text(text = "Retry") } },
                     icon = { Icon(imageVector = Icons.Default.Warning, contentDescription = null) },
-                    title = { Text(text = "Couldn't fetch the Question") },
-                    text = { Text("Please Check Your Internet Connection and Try Again") }
+                    title = { Text(text = stringResource(R.string.quiz_error_title)) },
+                    text = { Text(stringResource(R.string.quiz_error_text)) }
                 )
                 }
 
-                LoadingState.Loading -> Box(modifier = modifier.fillMaxSize()) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.align(Alignment.Center)
-                    )
+                LoadingState.Loading -> Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
                 }
 
                 LoadingState.Success -> {
 
-                    LinearProgressIndicator(
-                        color = MaterialTheme.colorScheme.tertiaryContainer,
-                        modifier = Modifier.height(10.dp),
-                        strokeCap = StrokeCap.Round,
-                        progress = {
-                            animatedProgress
-                        }
-                    )
 
-                    Timer(
-                        time = state.time,
-                        progress = animatedTimerProgress,
-                        modifier = Modifier.padding(15.dp)
-                    )
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -133,7 +135,9 @@ fun QuizScreen(modifier: Modifier = Modifier, state: QuizState, onEvent:(QuizEve
 
                         ) {
                             Box(
-                                modifier = Modifier.fillMaxWidth().wrapContentHeight(),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .wrapContentHeight(),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
@@ -264,7 +268,7 @@ fun OptionButton(modifier: Modifier = Modifier, option: String, onClick:() -> Un
                 enabled = answerState == AnswerState.NoAnswer,
                 onClick = {
                     onClick()
-            }),
+                }),
 
     ){
       Text(text = option, style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center, modifier = Modifier.padding(25.dp))

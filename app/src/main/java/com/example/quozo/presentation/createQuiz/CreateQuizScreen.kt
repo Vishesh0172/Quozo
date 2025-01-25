@@ -56,6 +56,7 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInteropFilter
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -89,7 +90,7 @@ fun SharedTransitionScope.CreateQuizScreen(
 
         AlertDialog(
             onDismissRequest = {onEvent(CreateQuizEvent.DismissDialog)},
-            confirmButton = { Button(onClick = {onEvent(CreateQuizEvent.DismissDialog)}) { Text(text = "Confirm")} },
+            confirmButton = { Button(onClick = {onEvent(CreateQuizEvent.DismissDialog)}) { Text(text = stringResource(R.string.dismiss))} },
             title = {Text(text = state.errorMessage!!)}
         )
     }
@@ -117,8 +118,8 @@ fun SharedTransitionScope.CreateQuizScreen(
             Column(modifier = Modifier
                 .weight(2.5f)
                 .padding(start = 14.dp)) {
-                Text( text = "Let's Play", style = MaterialTheme.typography.displayLarge)
-                Text( text = "Create Your Quiz", style = MaterialTheme.typography.titleSmall)
+                Text( text = stringResource(R.string.createQuiz_title), style = MaterialTheme.typography.displayLarge)
+                Text( text = stringResource(R.string.createQuiz_subHeading), style = MaterialTheme.typography.titleSmall)
 
 
             }
@@ -129,7 +130,7 @@ fun SharedTransitionScope.CreateQuizScreen(
                 .fillMaxSize()
                 .padding(top = 30.dp, start = 12.dp, end = 12.dp)) {
 
-                Text(text = "Questions", style = MaterialTheme.typography.titleSmall)
+                Text(text = stringResource(R.string.questions_title), style = MaterialTheme.typography.titleSmall)
                 TextField(
                     colors = TextFieldDefaults.colors(
                         errorIndicatorColor = Color.Transparent,
@@ -143,9 +144,9 @@ fun SharedTransitionScope.CreateQuizScreen(
                                 color = MaterialTheme.colorScheme.error,
                                 text =
                                 if(state.questionLimit <5)
-                                    "Can't have less than 5 Questions"
+                                    stringResource(R.string.less_questions_error)
                                 else
-                                    "Can't have more than 30 Questions"
+                                    stringResource(R.string.more_questions_error)
                             )
                         }
                     },
@@ -283,7 +284,9 @@ fun TimeLimit(modifier: Modifier = Modifier, time: String, onEvent: (CreateQuizE
 
 
 
-            Button(shape = CircleShape, onClick = {onEvent(CreateQuizEvent.PlusTimeLimit)}, modifier = Modifier.padding(10.dp).size(30.dp), contentPadding = PaddingValues(5.dp)) {
+            Button(shape = CircleShape, onClick = {onEvent(CreateQuizEvent.PlusTimeLimit)}, modifier = Modifier
+                .padding(10.dp)
+                .size(30.dp), contentPadding = PaddingValues(5.dp)) {
                 Icon(imageVector = Icons.Default.Add, contentDescription = null)
             }
         }
@@ -337,7 +340,7 @@ fun AnimatedStartButton(modifier: Modifier = Modifier, onEvent: (CreateQuizEvent
 
             }
     ) {
-        Text(text = "Start Quiz", style = MaterialTheme.typography.titleMedium)
+        Text(text = stringResource(R.string.start_quiz), style = MaterialTheme.typography.titleMedium)
     }
 
 }

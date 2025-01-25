@@ -7,6 +7,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Row
@@ -34,6 +35,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -76,7 +78,10 @@ fun ProfileScreen(modifier: Modifier = Modifier, state: ProfileState, continueQu
     var showAvatarDialog by remember { mutableStateOf(false) }
     var showNameDialog by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
-    val titles = listOf<String>("Incomplete", "Complete")
+    val titles = listOf<String>(
+        stringResource(R.string.incomplete),
+        stringResource(R.string.complete)
+    )
     val pagerState = rememberPagerState { 2 }
     val coroutineScope = rememberCoroutineScope()
 
@@ -104,17 +109,17 @@ fun ProfileScreen(modifier: Modifier = Modifier, state: ProfileState, continueQu
                 TextButton(onClick = {
                     showDeleteDialog = false
                     onEvent(ProfileEvent.DeleteQuiz)
-                }) { Text("Confirm")}
+                }) { Text(stringResource(R.string.confirm))}
             },
             dismissButton = {
                 TextButton(onClick = {
                     showDeleteDialog = false
 
-                }) { Text("Dismiss")}
+                }) { Text(stringResource(R.string.dismiss))}
                             },
-            title = {Text(text = "Delete Quiz")},
+            title = {Text(text = stringResource(R.string.delete_dialog_title))},
             icon = {Icon(imageVector = Icons.Default.Delete, contentDescription = null)},
-            text = {Text(text = "Are you sure you want to delete the quiz? All your progress will be lost")},
+            text = {Text(text = stringResource(R.string.delete_dialog_text))},
         )
 
     Column(
@@ -122,16 +127,26 @@ fun ProfileScreen(modifier: Modifier = Modifier, state: ProfileState, continueQu
             .fillMaxSize()
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Image(
-                painter = painterResource(state.avatar),
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier
-                    .padding(start = 10.dp)
-                    .size(100.dp)
-                    .clip(CircleShape)
-                    .clickable(onClick = { showAvatarDialog = true })
-            )
+            if (state.avatar != null )
+                Image(
+                    painter = painterResource(state.avatar),
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .padding(start = 10.dp)
+                        .size(100.dp)
+                        .clip(CircleShape)
+                        .clickable(onClick = { showAvatarDialog = true })
+                )
+            else
+                Box(
+                    modifier  = Modifier
+                        .padding(start = 10.dp)
+                        .size(100.dp)
+                        .clip(CircleShape),
+                    contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                }
 
             Row (verticalAlignment = Alignment.CenterVertically){
                 Text(
@@ -391,7 +406,7 @@ fun AvatarDialog(modifier: Modifier = Modifier, avatarList: List<Int>, updateAva
                     onDismiss()
                 }, 
                     modifier = Modifier.padding(10.dp)
-                ) { Text(text = "Update Avatar") }
+                ) { Text(text = stringResource(R.string.update_avatar)) }
 
             }
         }
@@ -403,6 +418,8 @@ fun AvatarDialog(modifier: Modifier = Modifier, avatarList: List<Int>, updateAva
 fun UserNameDialog(modifier: Modifier = Modifier, name: String, onDismiss: () -> Unit, onEvent: (ProfileEvent) -> Unit) {
 
     var nameState by remember { mutableStateOf(name) }
+
+    var buttonEnabled = (nameState.length > 2) && (nameState.length <= 15)
 
     Dialog(onDismissRequest = { onDismiss() }) {
 
@@ -422,16 +439,19 @@ fun UserNameDialog(modifier: Modifier = Modifier, name: String, onDismiss: () ->
                 OutlinedTextField(
                     shape = RoundedCornerShape(20.dp),
                     value = nameState,
-                    onValueChange = { nameState = it },
+                    onValueChange = {
+                        val value = it.replace(" ", "")
+                        nameState = if (value.length > 15) nameState else value },
                     singleLine = true,
                     modifier = Modifier.padding(10.dp))
                 Button(
+                    enabled = buttonEnabled,
                     onClick = {
                         onEvent(ProfileEvent.UpdateUserName(nameState))
                         onDismiss()
                     },
                     modifier = Modifier.padding(10.dp)
-                ) { Text(text = "Update") }
+                ) { Text(text = stringResource(R.string.update)) }
 
             }
         }

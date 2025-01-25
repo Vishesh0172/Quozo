@@ -44,12 +44,13 @@ class NameViewModel @Inject constructor(
             }
 
             is NameEvent.TypeName -> {
+                val value = event.value.replace(" ", "")
                 _state.update {
                     it.copy(
                         name = if (event.value.length > 15)
                             state.value.name
                         else
-                            event.value
+                            value
                     )
                 }
                 _state.update { it.copy(buttonEnabled = state.value.name.length >= 2 && state.value.name.length <= 15) }
